@@ -1,0 +1,39 @@
+[gd_scene load_steps=6 format=3 uid="uid://c6yh1xmbwyw7w"]
+
+[ext_resource type="Texture2D" uid="uid://circjx6arr6bj" path="res://icon.svg" id="1_7p1mj"]
+[ext_resource type="Script" uid="uid://cvlagokn6m7dt" path="res://scripts/enemy.gd" id="1_md0e3"]
+[ext_resource type="PackedScene" uid="uid://dmprd5w076xb7" path="res://scenes/gem.tscn" id="2_4ra3w"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_md0e3"]
+size = Vector2(51, 53)
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_md0e3"]
+radius = 23.537205
+
+[node name="Enemy" type="CharacterBody2D" groups=["enemy"]]
+collision_layer = 2
+collision_mask = 2
+script = ExtResource("1_md0e3")
+gem_scene = ExtResource("2_4ra3w")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+modulate = Color(1, 0, 0, 1)
+scale = Vector2(0.4, 0.4)
+texture = ExtResource("1_7p1mj")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(0.5, -0.5)
+shape = SubResource("RectangleShape2D_md0e3")
+
+[node name="Hitbox" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hitbox"]
+shape = SubResource("CircleShape2D_md0e3")
+debug_color = Color(0.9136442, 8.836806e-05, 0.7208244, 0.41960785)
+
+[node name="Timer" type="Timer" parent="."]
+wait_time = 0.5
+
+[connection signal="body_entered" from="Hitbox" to="." method="_on_hitbox_body_entered"]
+[connection signal="body_exited" from="Hitbox" to="." method="_on_hitbox_body_exited"]
+[connection signal="timeout" from="Timer" to="." method="_on_timer_timeout"]
