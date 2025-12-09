@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=3 uid="uid://hnwm3t2ouuat"]
+[gd_scene load_steps=5 format=3 uid="uid://hnwm3t2ouuat"]
 
 [ext_resource type="Script" uid="uid://7tvcme4b771b" path="res://scripts/world.gd" id="1_k0juu"]
 [ext_resource type="PackedScene" uid="uid://pscvm7w81d4t" path="res://scenes/player.tscn" id="1_rwgxs"]
 [ext_resource type="PackedScene" uid="uid://c6yh1xmbwyw7w" path="res://scenes/enemy.tscn" id="3_4wyf3"]
+[ext_resource type="Texture2D" uid="uid://mw47gb8lw8u" path="res://art/bg.jpg" id="4_k0juu"]
 
 [node name="World" type="Node2D"]
 script = ExtResource("1_k0juu")
@@ -16,5 +17,14 @@ position = Vector2(-293, -154)
 [node name="EnemySpawner" type="Timer" parent="."]
 wait_time = 0.5
 autostart = true
+
+[node name="Background" type="TextureRect" parent="."]
+z_index = -10
+offset_left = -2000.0
+offset_top = -2000.0
+offset_right = 2000.0
+offset_bottom = 2000.0
+texture = ExtResource("4_k0juu")
+stretch_mode = 1
 
 [connection signal="timeout" from="EnemySpawner" to="." method="_on_enemy_spawner_timeout"]

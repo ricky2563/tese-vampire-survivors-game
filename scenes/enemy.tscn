@@ -1,14 +1,43 @@
-[gd_scene load_steps=6 format=3 uid="uid://c6yh1xmbwyw7w"]
+[gd_scene load_steps=11 format=3 uid="uid://c6yh1xmbwyw7w"]
 
-[ext_resource type="Texture2D" uid="uid://circjx6arr6bj" path="res://icon.svg" id="1_7p1mj"]
 [ext_resource type="Script" uid="uid://cvlagokn6m7dt" path="res://scripts/enemy.gd" id="1_md0e3"]
 [ext_resource type="PackedScene" uid="uid://dmprd5w076xb7" path="res://scenes/gem.tscn" id="2_4ra3w"]
+[ext_resource type="Texture2D" uid="uid://fdimhuu3ounn" path="res://art/enemy_skeleton_left.png" id="3_5uy6h"]
+[ext_resource type="Texture2D" uid="uid://c4rt6pnaw3py" path="res://art/enemy_skeleton_right.png" id="4_c4w8v"]
+[ext_resource type="AudioStream" uid="uid://dsp8vtfgselrr" path="res://audio/hitHurt.wav" id="5_c4w8v"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_xwavj"]
+atlas = ExtResource("3_5uy6h")
+region = Rect2(0, 0, 192, 262)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_nenq2"]
+atlas = ExtResource("4_c4w8v")
+region = Rect2(0, 0, 192, 262)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_md484"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_xwavj")
+}],
+"loop": true,
+"name": &"left",
+"speed": 5.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_nenq2")
+}],
+"loop": true,
+"name": &"right",
+"speed": 5.0
+}]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_md0e3"]
-size = Vector2(51, 53)
+size = Vector2(57, 62)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_md0e3"]
-radius = 23.537205
+radius = 28.01785
 
 [node name="Enemy" type="CharacterBody2D" groups=["enemy"]]
 collision_layer = 2
@@ -16,13 +45,14 @@ collision_mask = 2
 script = ExtResource("1_md0e3")
 gem_scene = ExtResource("2_4ra3w")
 
-[node name="Sprite2D" type="Sprite2D" parent="."]
-modulate = Color(1, 0, 0, 1)
-scale = Vector2(0.4, 0.4)
-texture = ExtResource("1_7p1mj")
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+position = Vector2(2.4999952, 0.4999981)
+scale = Vector2(0.38020828, 0.37022898)
+sprite_frames = SubResource("SpriteFrames_md484")
+animation = &"right"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
-position = Vector2(0.5, -0.5)
+position = Vector2(-0.5000038, 0)
 shape = SubResource("RectangleShape2D_md0e3")
 
 [node name="Hitbox" type="Area2D" parent="."]
@@ -33,6 +63,9 @@ debug_color = Color(0.9136442, 8.836806e-05, 0.7208244, 0.41960785)
 
 [node name="Timer" type="Timer" parent="."]
 wait_time = 0.5
+
+[node name="HitSound" type="AudioStreamPlayer2D" parent="."]
+stream = ExtResource("5_c4w8v")
 
 [connection signal="body_entered" from="Hitbox" to="." method="_on_hitbox_body_entered"]
 [connection signal="body_exited" from="Hitbox" to="." method="_on_hitbox_body_exited"]
