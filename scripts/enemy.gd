@@ -3,6 +3,7 @@ extends CharacterBody2D
 @export var speed = 80.0
 @export var health = 30.0
 @export var gem_scene: PackedScene
+@export var is_boss = false
 
 var player = null 
 var player_in_range = null 
@@ -16,6 +17,8 @@ var player_in_range = null
 func _ready():
 	player = get_tree().get_first_node_in_group("player")
 	anim.play("right")
+	# if is_boss:
+	# 	boss_flash()
 
 func _physics_process(delta):
 	if player:
@@ -46,7 +49,7 @@ func _on_timer_timeout():
 
 func attack_player():
 	if player_in_range:
-		player_in_range.take_damage(2)
+		player_in_range.take_damage(0)
 
 func take_damage(amount):
 	health -= amount
@@ -71,3 +74,10 @@ func die():
 		get_tree().root.call_deferred("add_child", new_gem)
 	
 	queue_free()
+	
+func boss_flash():
+	while true:
+		modulate = Color(1,0.5,0.5) # vermelho claro
+		await get_tree().create_timer(0.3).timeout
+		modulate = Color(1,1,1)
+		await get_tree().create_timer(0.3).timeout

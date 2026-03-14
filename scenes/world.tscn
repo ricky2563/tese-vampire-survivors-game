@@ -1,13 +1,15 @@
-[gd_scene load_steps=5 format=3 uid="uid://hnwm3t2ouuat"]
+[gd_scene load_steps=6 format=3 uid="uid://hnwm3t2ouuat"]
 
 [ext_resource type="Script" uid="uid://7tvcme4b771b" path="res://scripts/world.gd" id="1_k0juu"]
 [ext_resource type="PackedScene" uid="uid://pscvm7w81d4t" path="res://scenes/player.tscn" id="1_rwgxs"]
 [ext_resource type="PackedScene" uid="uid://c6yh1xmbwyw7w" path="res://scenes/enemy.tscn" id="3_4wyf3"]
+[ext_resource type="PackedScene" uid="uid://dktu8qfoyqyi" path="res://scenes/boss.tscn" id="3_71j4m"]
 [ext_resource type="Texture2D" uid="uid://mw47gb8lw8u" path="res://art/bg.jpg" id="4_k0juu"]
 
 [node name="World" type="Node2D"]
 script = ExtResource("1_k0juu")
 enemy_scene = ExtResource("3_4wyf3")
+boss_scene = ExtResource("3_71j4m")
 
 [node name="Player" parent="." instance=ExtResource("1_rwgxs")]
 
