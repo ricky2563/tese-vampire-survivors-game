@@ -29,4 +29,16 @@ offset_bottom = 2000.0
 texture = ExtResource("4_k0juu")
 stretch_mode = 1
 
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="CanvasLayer"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -217.0
+offset_top = 23.0
+offset_right = -27.0
+offset_bottom = 78.0
+grow_horizontal = 0
+
 [connection signal="timeout" from="EnemySpawner" to="." method="_on_enemy_spawner_timeout"]

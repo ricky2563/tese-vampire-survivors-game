@@ -23,7 +23,8 @@ func _ready():
 func _physics_process(delta):
 	if player:
 		var direction = global_position.direction_to(player.global_position)
-		velocity = direction * speed
+		var separation = get_separation_force()
+		velocity = (direction * speed) + separation
 		move_and_slide()
 		
 		# Animação Esquerda/Direita
@@ -81,3 +82,20 @@ func boss_flash():
 		await get_tree().create_timer(0.3).timeout
 		modulate = Color(1,1,1)
 		await get_tree().create_timer(0.3).timeout
+		
+func get_separation_force():
+	var separation_force = Vector2.ZERO
+	
+	var enemies = get_tree().get_nodes_in_group("enemy")
+	
+	for other in enemies:
+		if other == self:
+			continue
+		
+		var distance = global_position.distance_to(other.global_position)
+		
+		if distance < 20: # distância mínima desejada
+			var push_dir = global_position.direction_to(other.global_position)
+			separation_force -= push_dir * 50 # força de afastamento
+	
+	return separation_force
