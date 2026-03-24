@@ -1,0 +1,44 @@
+[gd_scene load_steps=7 format=3 uid="uid://bwqc5ajvt008q"]
+
+[ext_resource type="Script" uid="uid://b2us0h5s2u1r2" path="res://scenes/fire_hand_attack.gd" id="1_aabw1"]
+[ext_resource type="Texture2D" uid="uid://dax0vdtnsq7ov" path="res://art/fire_hand_attack.png" id="2_v217h"]
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_sc5b6"]
+atlas = ExtResource("2_v217h")
+region = Rect2(0, 0, 306, 408)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_aw8t0"]
+atlas = ExtResource("2_v217h")
+region = Rect2(306, 0, 306, 408)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_2pngg"]
+animations = [{
+"frames": [{
+"duration": 3.0,
+"texture": SubResource("AtlasTexture_sc5b6")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_aw8t0")
+}],
+"loop": false,
+"name": &"rise",
+"speed": 5.0
+}]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_7tt2v"]
+size = Vector2(196, 179)
+
+[node name="FireHandAttack" type="Area2D"]
+script = ExtResource("1_aabw1")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]
+sprite_frames = SubResource("SpriteFrames_2pngg")
+animation = &"rise"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+position = Vector2(14, 3.5)
+shape = SubResource("RectangleShape2D_7tt2v")
+
+[node name="Timer" type="Timer" parent="."]
+
+[connection signal="animation_finished" from="AnimatedSprite2D" to="." method="_on_sprite_2d_animation_finished"]

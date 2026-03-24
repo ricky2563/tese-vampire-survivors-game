@@ -17,6 +17,7 @@ enum SpawnMode {
 # ========================
 @export var enemy_scene: PackedScene
 @export var boss_scene: PackedScene
+@export var boss_scene_fire: PackedScene
 
 # ========================
 # CONTROLO
@@ -139,6 +140,26 @@ func spawn_boss():
 	add_child(boss)
 
 # ========================
+# SPAWN BOSS (Fire)
+# ========================
+func spawn_boss_fire():
+	var player = get_player()
+	if not player:
+		return
+	
+	if boss_scene_fire == null:
+		print("Boss fire não atribuído!")
+		return
+	
+	var boss = boss_scene_fire.instantiate()
+	
+	# spawn perto do player (para veres bem)
+	var offset = Vector2(150, 0)
+	boss.global_position = player.global_position + offset
+	
+	add_child(boss)
+
+# ========================
 # HELPERS
 # ========================
 func get_player():
@@ -177,6 +198,9 @@ func _input(event):
 			KEY_4:
 				spawn_mode = SpawnMode.LINE_HORDE
 				print("Modo: HORDE LINE")
+			KEY_N:
+				spawn_boss_fire()
+				print("Boss FIRE spawnado")
 			KEY_SPACE:   # <--- tecla espaço
 				clear_enemies()
 		update_label()
