@@ -1,6 +1,6 @@
 extends CharacterBody2D
 
-@export var speed = 60
+@export var speed = 40
 @export var player: Node2D
 @export var fire_hand_scene: PackedScene
 
