@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://cgfy2a4d6eww1"]
+[gd_scene load_steps=6 format=3 uid="uid://cgfy2a4d6eww1"]
 
 [ext_resource type="Texture2D" uid="uid://pf43w664fc6p" path="res://art/boss_fogo.png" id="1_h8q6f"]
-[ext_resource type="Script" uid="uid://vftbrktvsytp" path="res://scenes/fire_boss.gd" id="1_nsgjb"]
+[ext_resource type="Script" uid="uid://vftbrktvsytp" path="res://scripts/fire_boss.gd" id="1_nsgjb"]
 [ext_resource type="PackedScene" uid="uid://bwqc5ajvt008q" path="res://scenes/fire_hand_attack.tscn" id="2_smdvo"]
+[ext_resource type="PackedScene" uid="uid://bl6awex7t8b6q" path="res://scenes/Meteor.tscn" id="3_8gh2r"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_nsgjb"]
 size = Vector2(122, 120)
@@ -10,6 +11,7 @@ size = Vector2(122, 120)
 [node name="FireBoss" type="CharacterBody2D"]
 script = ExtResource("1_nsgjb")
 fire_hand_scene = ExtResource("2_smdvo")
+meteor_scene = ExtResource("3_8gh2r")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
 position = Vector2(7.6293945e-06, -0.9999695)

@@ -1,6 +1,6 @@
 [gd_scene load_steps=7 format=3 uid="uid://bwqc5ajvt008q"]
 
-[ext_resource type="Script" uid="uid://b2us0h5s2u1r2" path="res://scenes/fire_hand_attack.gd" id="1_aabw1"]
+[ext_resource type="Script" uid="uid://b2us0h5s2u1r2" path="res://scripts/fire_hand_attack.gd" id="1_aabw1"]
 [ext_resource type="Texture2D" uid="uid://mtvewape005h" path="res://art/fire_hand_attack.png" id="2_v217h"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_aabw1"]

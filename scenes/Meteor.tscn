@@ -1,0 +1,25 @@
+[gd_scene load_steps=5 format=3 uid="uid://bl6awex7t8b6q"]
+
+[ext_resource type="Texture2D" uid="uid://u0gdg70kd7ml" path="res://art/fire_meteor.png" id="1_pkplu"]
+[ext_resource type="Script" uid="uid://bla21d7g7cncl" path="res://scripts/meteor.gd" id="1_rsaf7"]
+[ext_resource type="PackedScene" uid="uid://bvsibnqx51hur" path="res://scenes/shadow.tscn" id="2_mpu1k"]
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_rsaf7"]
+size = Vector2(71, 65.5)
+
+[node name="Meteor" type="Node2D"]
+script = ExtResource("1_rsaf7")
+shadow_scene = ExtResource("2_mpu1k")
+
+[node name="Sprite2D" type="Sprite2D" parent="."]
+position = Vector2(1.0000305, 1.0000153)
+scale = Vector2(0.47633117, 0.43495935)
+texture = ExtResource("1_pkplu")
+
+[node name="Timer" type="Timer" parent="."]
+
+[node name="Area2D" type="Area2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Area2D"]
+position = Vector2(3.5, 90.25)
+shape = SubResource("RectangleShape2D_rsaf7")
