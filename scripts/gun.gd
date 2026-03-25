@@ -1,49 +1,41 @@
 extends Area2D
 
-@export var bullet_scene: PackedScene # Vamos arrastar a bala para aqui
+@export var bullet_scene: PackedScene
+
 @onready var shooting_point = $ShootingPoint
 @onready var timer = $Timer
 
+var player = null
+
 func _ready():
-	timer.wait_time = 1 # Dispara a cada meio segundo
+	player = get_tree().get_first_node_in_group("player")
+	
+	timer.wait_time = 1
 	timer.start()
 
-func _physics_process(delta):
-	# 1. Encontrar todos os inimigos dentro do círculo (CollisionShape)
-	var enemies_in_range = get_overlapping_bodies()
+func _process(delta):
+	if not player:
+		return
 	
-	if enemies_in_range.size() > 0:
-		var target_enemy = null
-		var shortest_distance = INF # Começa com infinito
-		
-		# 2. Loop para descobrir qual está mais perto
-		for enemy in enemies_in_range:
-			# Verifica se é mesmo um inimigo (para não apontar para paredes ou outras coisas)
-			if enemy.is_in_group("enemy"): # 
-				var current_distance = global_position.distance_to(enemy.global_position)
-				if current_distance < shortest_distance:
-					shortest_distance = current_distance
-					target_enemy = enemy
-		
-		# 3. Apontar a arma
-		if target_enemy:
-			look_at(target_enemy.global_position)
+	# Rodar arma consoante direção do player
+	if player.is_facing_right:
+		scale.x = 1
+	else:
+		scale.x = -1
 
 func _on_timer_timeout():
 	shoot()
 
 func shoot():
-	# Verifica se há inimigos antes de tentar disparar
-	var enemies = get_overlapping_bodies()
-	if enemies.size() > 0:
-		var new_bullet = bullet_scene.instantiate()
-		
-		# O SEGREDO ESTÁ AQUI:
-		# 1. Adicionar primeiro ao "Root" (o topo do mundo), ignorando o Player
-		get_tree().root.add_child(new_bullet)
-		
-		# 2. Definir a posição DEPOIS de adicionar ao mundo
-		# Assim garantimos que ele usa as coordenadas globais reais
-		new_bullet.global_position = shooting_point.global_position
-		new_bullet.global_rotation = shooting_point.global_rotation
-		
+	if bullet_scene == null:
+		print("Bullet scene não atribuída!")
+		return
+	
+	var new_bullet = bullet_scene.instantiate()
+	
+	# Adiciona ao mundo
+	get_tree().current_scene.add_child(new_bullet)
+	
+	# Define posição e rotação
+	new_bullet.global_position = shooting_point.global_position
+	new_bullet.global_rotation = shooting_point.global_rotation

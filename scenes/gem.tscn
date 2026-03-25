@@ -1,7 +1,7 @@
 [gd_scene load_steps=4 format=3 uid="uid://dmprd5w076xb7"]
 
 [ext_resource type="Script" uid="uid://eynmkkoiqgkd" path="res://scripts/gem.gd" id="1_mpwtx"]
-[ext_resource type="Texture2D" uid="uid://circjx6arr6bj" path="res://icon.svg" id="2_bhq7q"]
+[ext_resource type="Texture2D" uid="uid://bk87ph6p1o6gf" path="res://art/gem.png" id="2_mpwtx"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_d1wgw"]
 radius = 11.045361
@@ -11,8 +11,9 @@ collision_layer = 0
 script = ExtResource("1_mpwtx")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
-scale = Vector2(0.2, 0.2)
-texture = ExtResource("2_bhq7q")
+position = Vector2(4.7683716e-07, -9.536743e-07)
+scale = Vector2(0.048999995, 0.054)
+texture = ExtResource("2_mpwtx")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="."]
 shape = SubResource("CircleShape2D_d1wgw")
