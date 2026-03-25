@@ -6,6 +6,7 @@ extends Area2D
 @onready var timer = $Timer
 
 var player = null
+var triple_shot = false
 
 func _ready():
 	player = get_tree().get_first_node_in_group("player")
@@ -28,14 +29,26 @@ func _on_timer_timeout():
 
 func shoot():
 	if bullet_scene == null:
-		print("Bullet scene não atribuída!")
 		return
 	
-	var new_bullet = bullet_scene.instantiate()
+	if triple_shot:
+		shoot_triple()
+	else:
+		shoot_single()
+
+func shoot_single():
+	var bullet = bullet_scene.instantiate()
+	get_tree().current_scene.add_child(bullet)
 	
-	# Adiciona ao mundo
-	get_tree().current_scene.add_child(new_bullet)
+	bullet.global_position = shooting_point.global_position
+	bullet.global_rotation = shooting_point.global_rotation
 	
-	# Define posição e rotação
-	new_bullet.global_position = shooting_point.global_position
-	new_bullet.global_rotation = shooting_point.global_rotation
+func shoot_triple():
+	var angles = [0, deg_to_rad(20), deg_to_rad(-20)]
+	
+	for angle in angles:
+		var bullet = bullet_scene.instantiate()
+		get_tree().current_scene.add_child(bullet)
+		
+		bullet.global_position = shooting_point.global_position
+		bullet.global_rotation = shooting_point.global_rotation + angle

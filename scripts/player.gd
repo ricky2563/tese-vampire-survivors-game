@@ -17,6 +17,7 @@ extends CharacterBody2D
 
 # --- NOVO: Variável para lembrar para onde estamos a olhar ---
 var is_facing_right = true 
+var upgrades_owned = []
 
 func _ready():
 	health_bar.max_value = health
@@ -84,10 +85,18 @@ func gain_experience(amount):
 func level_up():
 	level += 1
 	experience = 0 
-	experience_required += 50 
+	experience_required += 100 
 	
 	experience_bar.max_value = experience_required
 	experience_bar.value = experience
 	level_label.text = "Lvl. " + str(level)
 	
 	print("LEVEL UP! Nível Atual: ", level)
+	
+	show_upgrade_menu()
+	
+func show_upgrade_menu():
+	get_tree().paused = true
+	
+	var menu = preload("res://scenes/upgrade_menu.tscn").instantiate()
+	get_tree().current_scene.add_child(menu)

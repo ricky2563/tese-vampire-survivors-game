@@ -1,0 +1,46 @@
+[gd_scene load_steps=7 format=3 uid="uid://hnwm3t2ouuat"]
+
+[ext_resource type="Script" uid="uid://7tvcme4b771b" path="res://scripts/world.gd" id="1_k0juu"]
+[ext_resource type="PackedScene" uid="uid://pscvm7w81d4t" path="res://scenes/player.tscn" id="1_rwgxs"]
+[ext_resource type="PackedScene" uid="uid://c6yh1xmbwyw7w" path="res://scenes/enemy.tscn" id="3_4wyf3"]
+[ext_resource type="PackedScene" uid="uid://dktu8qfoyqyi" path="res://scenes/boss.tscn" id="3_71j4m"]
+[ext_resource type="Texture2D" uid="uid://mw47gb8lw8u" path="res://art/bg.jpg" id="4_k0juu"]
+[ext_resource type="PackedScene" uid="uid://cgfy2a4d6eww1" path="res://scenes/fire_boss.tscn" id="4_qfnet"]
+
+[node name="World" type="Node2D"]
+script = ExtResource("1_k0juu")
+enemy_scene = ExtResource("3_4wyf3")
+boss_scene = ExtResource("3_71j4m")
+boss_scene_fire = ExtResource("4_qfnet")
+
+[node name="Player" parent="." instance=ExtResource("1_rwgxs")]
+
+[node name="Enemy" parent="." instance=ExtResource("3_4wyf3")]
+position = Vector2(-293, -154)
+
+[node name="EnemySpawner" type="Timer" parent="."]
+wait_time = 0.5
+autostart = true
+
+[node name="Background" type="TextureRect" parent="."]
+z_index = -10
+offset_left = -2000.0
+offset_top = -2000.0
+offset_right = 2000.0
+offset_bottom = 2000.0
+texture = ExtResource("4_k0juu")
+stretch_mode = 1
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="CanvasLayer"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -217.0
+offset_top = 23.0
+offset_right = -27.0
+offset_bottom = 78.0
+grow_horizontal = 0
+
+[connection signal="timeout" from="EnemySpawner" to="." method="_on_enemy_spawner_timeout"]
