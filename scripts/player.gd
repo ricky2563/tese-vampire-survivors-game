@@ -10,7 +10,7 @@ extends CharacterBody2D
 @onready var anim = $AnimatedSprite2D 
 
 @export var experience = 0
-@export var experience_required = 100
+@export var experience_required = 20
 @export var level = 1
 
 @onready var experience_bar = $HUD/ExperienceBar
@@ -18,6 +18,7 @@ extends CharacterBody2D
 # --- NOVO: Variável para lembrar para onde estamos a olhar ---
 var is_facing_right = true 
 var upgrades_owned = []
+var pickup_range_level = 0
 
 func _ready():
 	health_bar.max_value = health
@@ -85,7 +86,7 @@ func gain_experience(amount):
 func level_up():
 	level += 1
 	experience = 0 
-	experience_required += 100 
+	experience_required += 15 
 	
 	experience_bar.max_value = experience_required
 	experience_bar.value = experience

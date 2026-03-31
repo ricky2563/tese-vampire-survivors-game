@@ -2,7 +2,9 @@ extends Area2D
 
 var travelled_distance = 0
 var speed = 400
-var range = 1200 # Distância máxima que a bala viaja
+var bullet_range = 1200 # Distância máxima que a bala viaja
+var piercing = 0
+var enemies_hit = []
 
 func _physics_process(delta):
 	# Mover para a frente (na direção em que a bala está rodada)
@@ -11,11 +13,22 @@ func _physics_process(delta):
 	position += direction * speed * delta
 	
 	travelled_distance += speed * delta
-	if travelled_distance > range:
+	if travelled_distance > bullet_range:
 		queue_free() # Destroi a bala se for longe demais
 
 # Liga este sinal através do painel Node -> body_entered
 func _on_body_entered(body):
-	queue_free() # A bala destrói-se ao bater
 	if body.has_method("take_damage"):
-		body.take_damage(50) # Tira 50 de vida ao inimigo
+		
+		# evitar hits duplicados
+		if body in enemies_hit:
+			return
+		
+		enemies_hit.append(body)
+		body.take_damage(50)
+		
+		# reduz piercing
+		piercing -= 1
+		
+		if piercing < 0:
+			queue_free()

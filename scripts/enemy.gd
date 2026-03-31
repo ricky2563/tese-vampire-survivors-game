@@ -4,6 +4,7 @@ extends CharacterBody2D
 @export var health = 30.0
 @export var gem_scene: PackedScene
 @export var is_boss = false
+@export var xp_value = 10
 
 var player = null 
 var player_in_range = null 
@@ -17,8 +18,9 @@ var player_in_range = null
 func _ready():
 	player = get_tree().get_first_node_in_group("player")
 	anim.play("right")
-	# if is_boss:
-	# 	boss_flash()
+	
+	if is_boss:
+		xp_value = 100  # boss dá mais XP
 
 func _physics_process(delta):
 	if player:
@@ -50,7 +52,7 @@ func _on_timer_timeout():
 
 func attack_player():
 	if player_in_range:
-		player_in_range.take_damage(0)
+		player_in_range.take_damage(5)
 
 func take_damage(amount):
 	health -= amount
@@ -72,6 +74,7 @@ func die():
 	if gem_scene:
 		var new_gem = gem_scene.instantiate()
 		new_gem.global_position = global_position
+		new_gem.xp_amount = xp_value
 		get_tree().root.call_deferred("add_child", new_gem)
 	
 	queue_free()

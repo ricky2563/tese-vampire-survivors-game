@@ -24,23 +24,79 @@ enum SpawnMode {
 # ========================
 var max_enemies = 100
 var enemies_spawned = 0
+var game_time = 0.0
+var boss_fire_spawned = false
 
 # ========================
-# MAIN SPAWNER
+# TIME CONTROL
+# ========================
+
+func _process(delta):
+	game_time += delta
+	
+	var minutes = int(game_time) / 60
+	var seconds = int(game_time) % 60
+	$CanvasLayer/GameTime.text = str(minutes) + ":" + str(seconds).pad_zeros(2)
+		
+	if game_time > 120 and not boss_fire_spawned:
+		spawn_boss_fire()
+		boss_fire_spawned = true
+
+# ========================
+# MAIN SPAWNER (Scenarios)
+# ========================
+#func _on_enemy_spawner_timeout():
+	#if get_tree().get_nodes_in_group("enemy").size() >= max_enemies:
+		#return
+	#
+	#match spawn_mode:
+		#SpawnMode.CONTINUOUS:
+			#spawn_continuous()
+		#SpawnMode.HORDE:
+			#spawn_horde()
+		#SpawnMode.WAVES_WITH_BOSS:
+			#spawn_wave_with_boss()
+		#SpawnMode.LINE_HORDE:
+			#spawn_line_horde()
+			
+# ========================
+# MAIN SPAWNER (Game states)
 # ========================
 func _on_enemy_spawner_timeout():
 	if get_tree().get_nodes_in_group("enemy").size() >= max_enemies:
 		return
 	
-	match spawn_mode:
-		SpawnMode.CONTINUOUS:
-			spawn_continuous()
-		SpawnMode.HORDE:
-			spawn_horde()
-		SpawnMode.WAVES_WITH_BOSS:
-			spawn_wave_with_boss()
-		SpawnMode.LINE_HORDE:
-			spawn_line_horde()
+	if game_time < 60:
+		early_game()
+	elif game_time < 150:
+		mid_game()
+	else:
+		late_game()
+		
+# ========================
+# GAME STATES
+# ========================
+func early_game():
+	for i in range(2):
+		spawn_enemy_around_player(700)
+		
+func mid_game():
+	for i in range(4):
+		spawn_enemy_around_player(700)
+	
+	# pequena horda ocasional
+	if randi() % 3 == 0:
+		spawn_horde()
+
+func late_game():
+	for i in range(6):
+		spawn_enemy_around_player(700)
+	
+	spawn_horde()
+	
+	# boss ocasional
+	if randf() < 0.3:
+		spawn_boss()
 
 # ========================
 # SCENARIO 1 — CONTÍNUO
@@ -154,7 +210,7 @@ func spawn_boss_fire():
 	var boss = boss_scene_fire.instantiate()
 	
 	# spawn perto do player (para veres bem)
-	var offset = Vector2(150, 0)
+	var offset = Vector2(150, 200)
 	boss.global_position = player.global_position + offset
 	
 	add_child(boss)

@@ -7,6 +7,7 @@ extends Area2D
 
 var player = null
 var triple_shot = false
+var piercing_level = 0
 
 func _ready():
 	player = get_tree().get_first_node_in_group("player")
@@ -42,6 +43,7 @@ func shoot_single():
 	
 	bullet.global_position = shooting_point.global_position
 	bullet.global_rotation = shooting_point.global_rotation
+	bullet.piercing = piercing_level
 	
 func shoot_triple():
 	var angles = [0, deg_to_rad(20), deg_to_rad(-20)]
@@ -52,3 +54,4 @@ func shoot_triple():
 		
 		bullet.global_position = shooting_point.global_position
 		bullet.global_rotation = shooting_point.global_rotation + angle
+		bullet.piercing = piercing_level

@@ -37,7 +37,7 @@ animations = [{
 size = Vector2(57, 62)
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_md0e3"]
-radius = 28.01785
+radius = 19.026299
 
 [node name="Enemy2" type="CharacterBody2D" groups=["enemy"]]
 collision_layer = 2
