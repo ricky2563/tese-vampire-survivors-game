@@ -5,6 +5,7 @@ extends CharacterBody2D
 
 @onready var health_bar = $HealthBar
 @onready var level_label = $HUD/LevelLabel
+@onready var umbrella_icon = $HUD/WeaponsContainer/IconUmbrella
 
 # --- NOVO: Referência para o AnimatedSprite2D ---
 @onready var anim = $AnimatedSprite2D 
@@ -12,6 +13,7 @@ extends CharacterBody2D
 @export var experience = 0
 @export var experience_required = 20
 @export var level = 1
+@export var umbrella_scene: PackedScene
 
 @onready var experience_bar = $HUD/ExperienceBar
 
@@ -20,12 +22,83 @@ var is_facing_right = true
 var upgrades_owned = []
 var pickup_range_level = 0
 var is_dead = false
+var can_umbrella = true
+var umbrella_cooldown = 5.0
+var is_shield_active = false
+var flicker_tween: Tween
 
 var weapons = {
 	"bow": {
 		"level": 0
 	}
 }
+
+func _input(event):
+	# Se o jogador estiver morto ou o menu de upgrade estiver aberto, não faz nada
+	if is_dead or get_tree().paused:
+		return
+		
+	# Verifica se a tecla E foi pressionada e se o cooldown terminou
+	if event is InputEventKey and event.pressed and event.keycode == KEY_E:
+		if can_umbrella:
+			deploy_umbrella()
+		else:
+			print("Guarda-chuva em cooldown!")
+
+func deploy_umbrella():
+	if umbrella_scene == null:
+		print("Erro: Cena do Guarda-Chuva não atribuída no Inspector!")
+		return
+		
+	# --- FASE 1: USOU A HABILIDADE ---
+	can_umbrella = false
+	is_shield_active = true
+	
+	# Instancia e adiciona o escudo
+	var shield = umbrella_scene.instantiate()
+	add_child(shield)
+	
+	print("Guarda-chuva ATIVADO!")
+	
+	# --- FASE 2: ATUALIZAR HUD (INÍCIO COOLDOWN) ---
+	# 1. Faz o ícone ficar semi-transparente imediatamente
+	umbrella_icon.modulate.a = 0.2
+	
+	# 2. Cria e inicia o Tween para piscar o Alpha (de 0.2 a 0.8 repetidamente)
+	flicker_tween = create_tween()
+	
+	# Define o loop infinito para o piscar
+	flicker_tween.set_loops() 
+	
+	# Transição de 0.2 a 0.8 durante 0.3 segundos
+	flicker_tween.tween_property(umbrella_icon, "modulate:a", 0.8, 0.3) 
+	
+	# Transição de volta de 0.8 a 0.2 durante 0.3 segundos
+	flicker_tween.tween_property(umbrella_icon, "modulate:a", 0.2, 0.3)
+	
+	print("HUD: Ícone começou a piscar (cooldown)")
+
+	# --- FASE 3: DURAÇÃO DO ESCUDO ---
+	# Espera os 2 segundos de duração do escudo ativo
+	await get_tree().create_timer(2.0, false).timeout
+	is_shield_active = false
+	
+	# --- FASE 4: RESTO DO COOLDOWN (AJUSTADO) ---
+	# Espera o resto do tempo do cooldown total
+	# (umbrella_cooldown - 2.0s que já passaram)
+	await get_tree().create_timer(umbrella_cooldown - 2.0, false).timeout
+	
+	# --- FASE 5: PRONTO A USAR (FIM COOLDOWN) ---
+	can_umbrella = true
+	
+	# 1. Cancela a animação de piscar (o Tween para)
+	if is_instance_valid(flicker_tween):
+		flicker_tween.kill() 
+		
+	# 2. Volta o ícone para opacidade total (1.0) para avisar que está pronto
+	umbrella_icon.modulate.a = 1.0
+	
+	print("Guarda-chuva pronto a usar! HUD atualizada.")
 
 func _ready():
 	health_bar.max_value = health

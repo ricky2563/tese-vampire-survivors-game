@@ -32,10 +32,27 @@ func fall():
 	tween.tween_callback(impact)
 
 func impact():
+	# 1. Procurar o player na área de impacto
+	var player_target = null
 	for body in $Area2D.get_overlapping_bodies():
 		if body.is_in_group("player"):
-			body.take_damage(damage)
+			player_target = body
+			break
+	
+	# 2. Lógica de Dano vs Escudo
+	if player_target:
+		if player_target.is_shield_active:
+			# BLOQUEADO: O player tem o escudo ligado
+			print("Meteoro bloqueado pelo estado do escudo!")
+			# Se quiseres chamar um som ou animação no escudo:
+			var shield_node = player_target.get_node_or_null("UmbrellaShield")
+			if shield_node and shield_node.has_method("block_attack"):
+				shield_node.block_attack()
+		else:
+			# DANO: O player está vulnerável
+			player_target.take_damage(damage)
 			
+	# Limpeza
 	if shadow:
 		shadow.queue_free()
 	queue_free()
