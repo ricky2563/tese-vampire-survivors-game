@@ -31,13 +31,22 @@ func _process(delta):
 		
 		track_timer += delta
 		
-		# --- LÓGICA DE ALPHA (TRANSITIONS) ---
+		# --- LÓGICA DE ALPHA E PISCAR ---
 		var progresso = track_timer / track_duration # Vai de 0.0 a 1.0
 		
-		# Mantemos a cor original (1, 1, 1) e aumentamos apenas o Alpha.
-		# Começa em 0.1 e termina em 1.0
-		var novo_alpha = lerp(0.1, 1.0, progresso)
-		shadow_anim.modulate = Color(1, 1, 1, novo_alpha)
+		# 1. Calculamos o Alpha base (o que já tinhas, de 0.1 a 1.0)
+		var alpha_base = lerp(0.1, 1.0, progresso)
+		
+		# 2. Calculamos a pulsação (Piscar)
+		# A velocidade aumenta conforme o progresso (mais rápido no fim!)
+		var velocidade_piscar = 15.0 + (progresso * 20.0) 
+		var onda = (sin(track_timer * velocidade_piscar) + 1.0) / 2.0 # Oscila entre 0 e 1
+		
+		# 3. Misturamos os dois: o alpha aumenta, mas oscila com a onda
+		# O 0.3 garante que ela nunca desapareça totalmente enquanto pisca
+		var alpha_final = alpha_base * (0.3 + (onda * 0.7))
+		
+		shadow_anim.modulate = Color(1, 1, 1, alpha_final)
 		
 		if track_timer >= track_duration:
 			start_attack()
