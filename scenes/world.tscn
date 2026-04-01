@@ -12,7 +12,6 @@ font_size = 24
 
 [node name="World" type="Node2D"]
 script = ExtResource("1_k0juu")
-enemy_scene = ExtResource("3_4wyf3")
 boss_scene = ExtResource("3_71j4m")
 boss_scene_fire = ExtResource("4_qfnet")
 

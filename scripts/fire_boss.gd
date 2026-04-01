@@ -72,7 +72,7 @@ func meteor_rain_attack():
 	# spawn final
 	for pos in positions:
 		spawn_meteor(pos)
-		await get_tree().create_timer(0.15).timeout
+		await get_tree().create_timer(0.15, false).timeout
 		
 func spawn_meteor(pos):
 	var meteor = meteor_scene.instantiate()

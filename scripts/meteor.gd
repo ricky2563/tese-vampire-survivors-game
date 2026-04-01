@@ -16,22 +16,20 @@ func _ready():
 	
 	create_shadow()
 	
-	await get_tree().create_timer(0.3).timeout 
+	# O 'false' diz ao timer: "Se o jogo pausar, para de contar!"
+	await get_tree().create_timer(0.3, false).timeout 
 	
 	fall()
 
 func fall():
-	var elapsed = 0.0
+	# Substituímos o while complicado por um Tween (animação por código)
+	var tween = create_tween()
 	
-	while elapsed < fall_time:
-		var t = elapsed / fall_time
-		
-		global_position = start_position.lerp(target_position, t)
-		
-		elapsed += get_process_delta_time()
-		await get_tree().process_frame
+	# Move do ponto atual para o target_position durante o fall_time
+	tween.tween_property(self, "global_position", target_position, fall_time)
 	
-	impact()
+	# Quando acabar de mover, chama o impacto automaticamente
+	tween.tween_callback(impact)
 
 func impact():
 	for body in $Area2D.get_overlapping_bodies():

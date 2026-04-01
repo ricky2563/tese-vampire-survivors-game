@@ -1,19 +1,13 @@
-[gd_scene load_steps=4 format=3 uid="uid://d2xo81yld3nuv"]
+[gd_scene load_steps=4 format=3 uid="uid://cmb1my775wjvl"]
 
-[ext_resource type="Script" uid="uid://cp5lagfg5lpsc" path="res://scenes/enemy_manager.gd" id="1_sqyd6"]
+[ext_resource type="Script" uid="uid://cp5lagfg5lpsc" path="res://scripts/enemy_manager.gd" id="1_sqyd6"]
 [ext_resource type="Texture2D" uid="uid://c4rt6pnaw3py" path="res://art/enemy_skeleton_right.png" id="2_i6mmg"]
-
-[sub_resource type="MultiMesh" id="MultiMesh_i6mmg"]
+[ext_resource type="PackedScene" uid="uid://dmprd5w076xb7" path="res://scenes/gem.tscn" id="3_m8so1"]
 
 [node name="EnemyManager" type="Node2D"]
 script = ExtResource("1_sqyd6")
-max_enemies = null
-enemy_speed = null
-enemy_health = null
-attack_radius = null
-attack_damage = null
-enemy_size = null
+enemy_sprite = ExtResource("2_i6mmg")
+gem_scene = ExtResource("3_m8so1")
+enemy_size = Vector2(80, 90)
 
 [node name="EnemiesMesh" type="MultiMeshInstance2D" parent="."]
-multimesh = SubResource("MultiMesh_i6mmg")
-texture = ExtResource("2_i6mmg")

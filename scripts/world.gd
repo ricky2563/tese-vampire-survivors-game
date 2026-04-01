@@ -15,17 +15,31 @@ enum SpawnMode {
 # ========================
 # SCENES
 # ========================
-@export var enemy_scene: PackedScene
+# APAGÁMOS A ENEMY_SCENE DAQUI!
 @export var boss_scene: PackedScene
 @export var boss_scene_fire: PackedScene
 
 # ========================
 # CONTROLO
 # ========================
-var max_enemies = 100
+var max_enemies = 1000
 var enemies_spawned = 0
 var game_time = 0.0
 var boss_fire_spawned = false
+var barrier_right_spawned = false
+var barrier_left_spawned = false
+
+
+func _ready():
+	# 1. Limpa os dados da partida anterior que ficaram no Autoload
+	EnemyManager.clear_all_enemies()
+	
+	# 2. Reset de variáveis de controlo do mundo
+	enemies_spawned = 0
+	game_time = 0.0
+	boss_fire_spawned = false
+	barrier_right_spawned = false
+	barrier_left_spawned = false
 
 # ========================
 # TIME CONTROL
@@ -37,33 +51,25 @@ func _process(delta):
 	var minutes = int(game_time) / 60
 	var seconds = int(game_time) % 60
 	$CanvasLayer/GameTime.text = str(minutes) + ":" + str(seconds).pad_zeros(2)
-		
+	
+	if game_time >= 90.0 and not barrier_right_spawned:
+		spawn_barrier_right()
+		barrier_right_spawned = true # Bloqueia para não spawnar mais
+		print("EVENTO: Barreira de sobrevivência aos 1:30!")
+	if game_time >= 105.0 and not barrier_left_spawned:
+		spawn_barrier_left()
+		barrier_left_spawned = true
+		print("EVENTO: Barreira ESQUERDA!")
 	if game_time > 120 and not boss_fire_spawned:
 		spawn_boss_fire()
 		boss_fire_spawned = true
 
 # ========================
-# MAIN SPAWNER (Scenarios)
-# ========================
-#func _on_enemy_spawner_timeout():
-	#if get_tree().get_nodes_in_group("enemy").size() >= max_enemies:
-		#return
-	#
-	#match spawn_mode:
-		#SpawnMode.CONTINUOUS:
-			#spawn_continuous()
-		#SpawnMode.HORDE:
-			#spawn_horde()
-		#SpawnMode.WAVES_WITH_BOSS:
-			#spawn_wave_with_boss()
-		#SpawnMode.LINE_HORDE:
-			#spawn_line_horde()
-			
-# ========================
 # MAIN SPAWNER (Game states)
 # ========================
 func _on_enemy_spawner_timeout():
-	if get_tree().get_nodes_in_group("enemy").size() >= max_enemies:
+	# AGORA PERGUNTA AO ENEMY MANAGER O TAMANHO DO ARRAY
+	if EnemyManager.enemies.size() >= max_enemies:
 		return
 	
 	if game_time < 60:
@@ -180,6 +186,63 @@ func spawn_line_horde():
 			spawn_enemy_at(base_position + offset)
 
 # ========================
+# SCENARIO 5 — BARREIRA (Lado Direito)
+# ========================
+func spawn_barrier_right():
+	var player = get_player()
+	if not player:
+		return
+		
+	var distance_to_right = 800 # Distância do player à barreira (ajusta para nascerem fora do ecrã)
+	var columns = 3             # A tua "densidade" (espessura da parede, 4 colunas)
+	var rows = 25               # Altura da parede (quantidade de inimigos de cima a baixo)
+	var spacing = 40            # Espaço em píxeis entre cada inimigo
+	
+	# O centro da barreira (à direita do player)
+	var center_pos = player.global_position + Vector2(distance_to_right, 0)
+	
+	# Para a barreira ficar centrada com o player, calculamos onde fica o "topo" dela
+	var start_y = center_pos.y - ((rows * spacing) / 2.0)
+	
+	# Loop duplo para criar a espessura (colunas) e a altura (linhas)
+	for col in range(columns):
+		for row in range(rows):
+			var spawn_pos = Vector2(
+				center_pos.x + (col * spacing), 
+				start_y + (row * spacing)
+			)
+			
+			# Pequeno toque: um desvio aleatório minúsculo para a parede parecer mais orgânica e não 100% robótica
+			spawn_pos += Vector2(randf_range(-5, 5), randf_range(-5, 5))
+			
+			spawn_enemy_at(spawn_pos)
+
+func spawn_barrier_left():
+	var player = get_player()
+	if not player:
+		return
+		
+	var distance_to_left = 800 
+	var columns = 3            
+	var rows = 25              
+	var spacing = 40           
+	
+	# O centro da barreira (à ESQUERDA do player, por isso usamos o sinal de menos -)
+	var center_pos = player.global_position + Vector2(-distance_to_left, 0)
+	
+	var start_y = center_pos.y - ((rows * spacing) / 2.0)
+	
+	for col in range(columns):
+		for row in range(rows):
+			# Subtraímos o col * spacing para a espessura crescer para a esquerda
+			var spawn_pos = Vector2(
+				center_pos.x - (col * spacing), 
+				start_y + (row * spacing)
+			)
+			spawn_pos += Vector2(randf_range(-5, 5), randf_range(-5, 5))
+			spawn_enemy_at(spawn_pos)
+
+# ========================
 # SPAWN BOSS (GENÉRICO)
 # ========================
 func spawn_boss():
@@ -187,6 +250,9 @@ func spawn_boss():
 	if not player:
 		return
 	
+	if boss_scene == null:
+		return
+		
 	var boss = boss_scene.instantiate()
 	
 	var random_direction = Vector2.RIGHT.rotated(randf_range(0, TAU))
@@ -219,7 +285,10 @@ func spawn_boss_fire():
 # HELPERS
 # ========================
 func get_player():
-	return get_tree().get_first_node_in_group("player")
+	var p = get_tree().get_first_node_in_group("player")
+	if is_instance_valid(p):
+		return p
+	return null
 
 func spawn_enemy_around_player(distance):
 	var player = get_player()
@@ -232,9 +301,8 @@ func spawn_enemy_around_player(distance):
 	spawn_enemy_at(pos)
 
 func spawn_enemy_at(pos):
-	var enemy = enemy_scene.instantiate()
-	enemy.global_position = pos
-	add_child(enemy)
+	# CHAMA O MANAGER GLOBAL EM VEZ DE INSTANCIAR CENA!
+	EnemyManager.spawn_enemy(pos, false)
 
 # ========================
 # DEBUG CONTROLS (OPCIONAL)
@@ -254,6 +322,9 @@ func _input(event):
 			KEY_4:
 				spawn_mode = SpawnMode.LINE_HORDE
 				print("Modo: HORDE LINE")
+			KEY_B:
+				spawn_barrier_right()
+				print("Barreira da Direita Spawnada!")
 			KEY_N:
 				spawn_boss_fire()
 				print("Boss FIRE spawnado")
@@ -265,15 +336,13 @@ func update_label():
 	$CanvasLayer/Label.text = ["CONTINUOUS", "HORDE", "WAVES", "LINE"][spawn_mode]
 	
 func clear_enemies():
-	# Pega todos os inimigos ativos
-	var enemies = get_tree().get_nodes_in_group("enemy")
-	for enemy in enemies:
-		enemy.queue_free()
+	# 1. Limpa a horda do Manager
+	EnemyManager.clear_all_enemies()
 		
-	# Opcional: também limpa bosses se quiser
+	# 2. Opcional: também limpa bosses (já que eles continuam a ser nós normais)
 	var bosses = get_tree().get_nodes_in_group("boss")
 	for boss in bosses:
 		boss.queue_free()
 	
 	enemies_spawned = 0
-	print("Tela limpa! " + str(enemies.size()) + " inimigos removidos")
+	print("Tela limpa!")

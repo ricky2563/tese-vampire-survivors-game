@@ -19,6 +19,7 @@ extends CharacterBody2D
 var is_facing_right = true 
 var upgrades_owned = []
 var pickup_range_level = 0
+var is_dead = false
 
 var weapons = {
 	"bow": {
@@ -71,16 +72,20 @@ func _physics_process(delta):
 	move_and_slide()
 
 func take_damage(amount):
+	# Se o jogador já estiver morto, sai da função imediatamente e ignora o ataque!
+	if is_dead:
+		return
 	health -= amount
 	health_bar.value = health 
 	print("Auch! Vida restante: ", health)
-	
 	if health <= 0:
 		die()
 
 func die():
+	# 1. Marca como morto para que os outros inimigos parem de dar dano neste frame
+	is_dead = true 
 	print("Morreu!")
-	get_tree().reload_current_scene()
+	get_tree().call_deferred("reload_current_scene")
 	
 func gain_experience(amount):
 	experience += amount
