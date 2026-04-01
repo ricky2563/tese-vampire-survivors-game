@@ -5,9 +5,13 @@ extends CharacterBody2D
 @export var fire_hand_scene: PackedScene
 @export var meteor_scene: PackedScene
 @export var sound_fireball_cast: AudioStream
+@export var sound_ring_warning: AudioStream
+@export var fire_ring_scene: PackedScene
 
 @onready var attack_timer = $AttackTimer
 @onready var audio_player = $AttackSound
+
+var is_attacking = false
 
 func _ready():
 	player = get_tree().get_first_node_in_group("player")
@@ -20,12 +24,16 @@ func _physics_process(delta):
 		move_and_slide()
 
 func _on_attack_timer_timeout():
+	if is_attacking:
+		return
 	var r = randf()
 	# 60% de chance para a mão, 40% para os meteoros
-	if r < 0.6:
+	if r < 0.4:
 		fire_hand_attack()
-	else:
+	elif r < 0.7:
 		meteor_rain_attack()
+	else:
+		fire_ring_attack()
 
 func fire_hand_attack():
 	if not player: return
@@ -88,3 +96,48 @@ func spawn_meteor(pos):
 	var meteor = meteor_scene.instantiate()
 	meteor.target_position = pos
 	get_tree().current_scene.add_child(meteor)
+	
+	
+func fire_ring_attack():
+	if not player: return
+	
+	is_attacking = true
+	# --- FASE 1: CARGA (7 SEGUNDOS) ---
+	var original_speed = speed
+	speed = 0 # O Boss para completamente
+	
+	if sound_ring_warning:
+		audio_player.stream = sound_ring_warning
+		# Se o teu som também tiver um atraso inicial, ajusta o segundo aqui:
+		audio_player.play(0.0) 
+	
+	# --- FEEDBACK VISUAL PARA A TESE ---
+	# Como 7 segundos é muito tempo, o Boss deve "tremer" cada vez mais
+	# para indicar que a energia está a ficar instável.
+	var duration = 7.0
+	var timer = 0.0
+	while timer < duration:
+		# Efeito de tremor (shaking)
+		global_position += Vector2(randf_range(-1, 1), randf_range(-1, 1)) * (timer * 2)
+		
+		# Espera um frame
+		await get_tree().process_frame
+		timer += get_process_delta_time()
+		
+		# Se o áudio chegar aos 7 segundos, paramos o som
+		if timer >= 7.0:
+			audio_player.stop()
+			break
+
+	# --- FASE 2: EXPLOSÃO ---
+	
+	if fire_ring_scene:
+		var ring = fire_ring_scene.instantiate()
+		ring.global_position = global_position
+		get_tree().current_scene.add_child(ring)
+		
+	print("Anel de Fogo disparado após 7s de carga!")
+	await get_tree().create_timer(1.0).timeout
+	
+	speed = original_speed
+	is_attacking = false
