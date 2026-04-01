@@ -1,0 +1,59 @@
+[gd_scene load_steps=9 format=3 uid="uid://hnwm3t2ouuat"]
+
+[ext_resource type="Script" uid="uid://7tvcme4b771b" path="res://scripts/world.gd" id="1_k0juu"]
+[ext_resource type="PackedScene" uid="uid://pscvm7w81d4t" path="res://scenes/player.tscn" id="1_rwgxs"]
+[ext_resource type="PackedScene" uid="uid://c6yh1xmbwyw7w" path="res://scenes/enemy.tscn" id="3_4wyf3"]
+[ext_resource type="PackedScene" uid="uid://dktu8qfoyqyi" path="res://scenes/boss.tscn" id="3_71j4m"]
+[ext_resource type="PackedScene" uid="uid://cgfy2a4d6eww1" path="res://scenes/fire_boss.tscn" id="4_qfnet"]
+[ext_resource type="PackedScene" uid="uid://d2xo81yld3nuv" path="res://scenes/enemy_manager.tscn" id="5_i7141"]
+[ext_resource type="Texture2D" uid="uid://dekmudqvcm6hj" path="res://art/bg_lava.png" id="6_qfnet"]
+
+[sub_resource type="LabelSettings" id="LabelSettings_qfnet"]
+font_size = 24
+
+[node name="World" type="Node2D"]
+script = ExtResource("1_k0juu")
+enemy_scene = ExtResource("3_4wyf3")
+boss_scene = ExtResource("3_71j4m")
+boss_scene_fire = ExtResource("4_qfnet")
+enemy_manager = ExtResource("5_i7141")
+
+[node name="Player" parent="." instance=ExtResource("1_rwgxs")]
+
+[node name="Enemy" parent="." instance=ExtResource("3_4wyf3")]
+position = Vector2(-293, -154)
+
+[node name="EnemySpawner" type="Timer" parent="."]
+wait_time = 2.0
+autostart = true
+
+[node name="Background" type="TextureRect" parent="."]
+z_index = -10
+offset_left = -2000.0
+offset_top = -2000.0
+offset_right = 2000.0
+offset_bottom = 2000.0
+texture = ExtResource("6_qfnet")
+stretch_mode = 5
+
+[node name="CanvasLayer" type="CanvasLayer" parent="."]
+
+[node name="Label" type="Label" parent="CanvasLayer"]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -217.0
+offset_top = 23.0
+offset_right = -27.0
+offset_bottom = 78.0
+grow_horizontal = 0
+
+[node name="GameTime" type="Label" parent="CanvasLayer"]
+offset_left = 535.0
+offset_top = 43.0
+offset_right = 744.0
+offset_bottom = 81.0
+label_settings = SubResource("LabelSettings_qfnet")
+horizontal_alignment = 1
+
+[connection signal="timeout" from="EnemySpawner" to="." method="_on_enemy_spawner_timeout"]

@@ -20,6 +20,12 @@ var is_facing_right = true
 var upgrades_owned = []
 var pickup_range_level = 0
 
+var weapons = {
+	"bow": {
+		"level": 0
+	}
+}
+
 func _ready():
 	health_bar.max_value = health
 	health_bar.value = health
@@ -101,3 +107,17 @@ func show_upgrade_menu():
 	
 	var menu = preload("res://scenes/upgrade_menu.tscn").instantiate()
 	get_tree().current_scene.add_child(menu)
+	
+func get_weapon_upgrade(weapon_name, level):
+	match weapon_name:
+		"bow":
+			match level:
+				0: return "bow_amount"
+				1: return "bow_amount"
+				2: return "bow_piercing"
+				3: return "bow_amount"
+				4: return "bow_triple"
+				5: return "bow_piercing"
+				6: return "bow_piercing"
+	
+	return "none"

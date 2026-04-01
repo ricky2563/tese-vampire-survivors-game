@@ -16,6 +16,7 @@ var player_in_range = null
 @onready var hit_sound = $HitSound
 
 func _ready():
+	add_to_group("enemy")
 	player = get_tree().get_first_node_in_group("player")
 	anim.play("right")
 	
@@ -89,16 +90,19 @@ func boss_flash():
 func get_separation_force():
 	var separation_force = Vector2.ZERO
 	
-	var enemies = get_tree().get_nodes_in_group("enemy")
+	var nearby = $Hitbox.get_overlapping_bodies()
 	
-	for other in enemies:
+	for other in nearby:
 		if other == self:
+			continue
+		
+		if not other.is_in_group("enemy"):
 			continue
 		
 		var distance = global_position.distance_to(other.global_position)
 		
-		if distance < 20: # distância mínima desejada
+		if distance < 20:
 			var push_dir = global_position.direction_to(other.global_position)
-			separation_force -= push_dir * 50 # força de afastamento
+			separation_force -= push_dir * 80
 	
 	return separation_force
