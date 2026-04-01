@@ -49,3 +49,5 @@ func create_shadow():
 	shadow.global_position = target_position
 	
 	get_tree().current_scene.add_child(shadow)
+	
+# TODO acho que a shadow n está exatamente onde deve estar
