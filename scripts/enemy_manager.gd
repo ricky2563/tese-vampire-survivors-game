@@ -1,212 +1,242 @@
 extends Node2D
 
 # ========================
-# CONFIGURAÇÃO
+# CONFIGURAÇÃO GERAL
 # ========================
 @export var enemy_sprite: Texture2D
 @export var gem_scene: PackedScene
-@export var max_enemies = 1000
-@export var enemy_speed = 80
-@export var enemy_health = 30
-@export var attack_radius = 30
+@export var max_enemies = 700
+@export var attack_radius = 30.0
 @export var attack_damage = 5
-@export var enemy_size = Vector2(32, 32) # Tamanho manual (ajusta no Inspector!)
+@export var enemy_size = Vector2(32, 32)
+
+# ========================
+# CONFIGURAÇÃO DOS INIMIGOS
+# ========================
+@export var enemy_speed = 80.0
+@export var enemy_health = 30
+
+@export var tank_sprite: Texture2D
+@export var tank_speed = 40.0    
+@export var tank_health = 200
 
 # ========================
 # VARIÁVEIS INTERNAS
 # ========================
 var enemies = []
-var grid_size = 50
+var grid_size = 40 
 var grid = {}
 var player = null
 var multimesh_instance: MultiMeshInstance2D
+var multimesh_instance_tanks: MultiMeshInstance2D # NOVO: O MultiMesh dos Tanks
+var debug_print_timer = 0.0
+var pending_xp = 0
 
-# ========================
-# READY
-# ========================
 func _ready():
 	add_to_group("enemy_manager")
 	player = get_tree().get_first_node_in_group("player")
+	
+	# --- MULTIMESH DOS INIMIGOS NORMAIS ---
 	multimesh_instance = $EnemiesMesh
-
-	# Criar MultiMesh
 	var mm = MultiMesh.new()
 	mm.transform_format = MultiMesh.TRANSFORM_2D
-
-	# QuadMesh para cada inimigo
 	var quad = QuadMesh.new()
 	quad.size = enemy_size
 	mm.mesh = quad
-	
 	var mat = CanvasItemMaterial.new()
 	multimesh_instance.material = mat
 	multimesh_instance.texture = enemy_sprite
-
-	# PRÉ-ALOCAÇÃO (O segredo para não piscar no spawn)
-	mm.instance_count = max_enemies # Reserva a memória toda
-	mm.visible_instance_count = 0   # Mas esconde-os para já
+	mm.instance_count = max_enemies
+	mm.visible_instance_count = 0
 	multimesh_instance.multimesh = mm
 
-	# Adiciona ao grupo para as balas encontrarem
-	add_to_group("enemy_manager")
+	# --- NOVO: MULTIMESH DOS TANKS ---
+	multimesh_instance_tanks = MultiMeshInstance2D.new()
+	add_child(multimesh_instance_tanks) # Adiciona à cena automaticamente
+	
+	var mm_tank = MultiMesh.new()
+	mm_tank.transform_format = MultiMesh.TRANSFORM_2D
+	var quad_tank = QuadMesh.new()
+	quad_tank.size = enemy_size
+	mm_tank.mesh = quad_tank
+	
+	var mat_tank = CanvasItemMaterial.new()
+	multimesh_instance_tanks.material = mat_tank
+	multimesh_instance_tanks.texture = tank_sprite 
+	
+	mm_tank.instance_count = max_enemies
+	mm_tank.visible_instance_count = 0
+	multimesh_instance_tanks.multimesh = mm_tank
 
 # ========================
-# SPAWN DE INIMIGOS
+# SPAWN DE INIMIGOS (ATUALIZADO)
 # ========================
-func spawn_enemy(pos: Vector2, is_boss=false):
+func spawn_enemy(pos: Vector2, is_boss=false, is_tank=false):
 	if enemies.size() >= max_enemies:
 		return
 
 	var enemy = {
 		"position": pos,
-		"velocity": Vector2.ZERO,
-		"health": enemy_health,
-		"speed": enemy_speed,
-		"is_boss": is_boss,
-		"xp_value": 100 if is_boss else 10,
-		"gem_scene": gem_scene,
-		"attack_cooldown": 0.0
+		"health": tank_health if is_tank else enemy_health,
+		"speed": tank_speed if is_tank else enemy_speed,
+		"xp_value": 100 if is_boss else (30 if is_tank else 10),
+		"is_tank": is_tank # NOVO: Guarda a informação se é tank
 	}
 	enemies.append(enemy)
-	# REMOVIDO: A atualização do MultiMesh daqui. O _process vai tratar disso em segurança!
 
-# ========================
-# SPAWN DE GEMAS
-# ========================
-func spawn_gem(pos: Vector2, xp_value):
-	if gem_scene:
+func spawn_gem(pos: Vector2, xp_value: int):
+	if gem_scene == null: return
+	
+	pending_xp += xp_value
+	
+	var drop_chance = 1.0 
+	
+	if enemies.size() > 400:
+		drop_chance = 0.1 
+	elif enemies.size() > 150:
+		drop_chance = 0.25 
+		
+	if randf() < drop_chance or pending_xp >= 100:
 		var gem = gem_scene.instantiate()
 		gem.global_position = pos
-		gem.xp_amount = xp_value
+		gem.xp_amount = pending_xp 
+		if pending_xp >= 50:
+			gem.scale = Vector2(1.5, 1.5)
+			
 		get_tree().root.call_deferred("add_child", gem)
+		pending_xp = 0 
 
 # ========================
-# PROCESSO DE MOVIMENTO E ATAQUE
+# PROCESSO SUPER OTIMIZADO
 # ========================
 func _process(delta):
 	if not is_instance_valid(player):
 		player = get_tree().get_first_node_in_group("player")
-		if not is_instance_valid(player):
-			return
+		if not is_instance_valid(player): return
 
+	var player_pos = player.global_position
+	var attack_rad_sq = attack_radius * attack_radius
+
+	# 1. PREENCHER A GRID 
 	grid.clear()
+	for e in enemies:
+		var cell = Vector2(int(e.position.x / grid_size), int(e.position.y / grid_size))
+		var cell_list = grid.get(cell)
+		if cell_list == null:
+			grid[cell] = [e] 
+		else:
+			cell_list.append(e)
 
-	# 1. PREENCHER A GRID
-	for i in range(enemies.size()):
-		var e = enemies[i]
-		var cell = Vector2(floor(e.position.x / grid_size), floor(e.position.y / grid_size))
-		if not grid.has(cell):
-			grid[cell] = []
-		grid[cell].append(i)
+	# NOVO: Contadores separados para os gráficos
+	var normal_count = 0
+	var tank_count = 0
 
-	# 2. LÓGICA DE MOVIMENTO E SEPARAÇÃO
-	for i in range(enemies.size()):
+	# 2. ITERAR INIMIGOS DE TRÁS PARA A FRENTE
+	var i = enemies.size() - 1
+	while i >= 0:
 		var e = enemies[i]
 		
-		# Ignora os que já morreram neste frame
+		# MORTE E LIMPEZA 
 		if e.health <= 0:
+			spawn_gem(e.position, e.xp_value)
+			enemies[i] = enemies[enemies.size() - 1]
+			enemies.pop_back()
+			i -= 1
 			continue
 
-		# Direção para o player
-		var dir_to_player = player.global_position - e.position
-		if dir_to_player.length_squared() > 0:
-			dir_to_player = dir_to_player.normalized()
-		else:
-			dir_to_player = Vector2.RIGHT # Previne NaN se estiverem em cima do player
+		# DIREÇÃO
+		var diff_to_player = player_pos - e.position
+		var velocity = Vector2.ZERO
+		
+		if diff_to_player.length_squared() > 1.0:
+			velocity = diff_to_player.normalized() * e.speed
 
-		e.velocity = dir_to_player * e.speed
-
-		# Separação Segura
+		# SEPARAÇÃO 
 		var separation = Vector2.ZERO
-		var cell = Vector2(floor(e.position.x / grid_size), floor(e.position.y / grid_size))
+		var cell = Vector2(int(e.position.x / grid_size), int(e.position.y / grid_size))
 		
 		for dx in range(-1, 2):
 			for dy in range(-1, 2):
 				var neighbor_cell = cell + Vector2(dx, dy)
-				if grid.has(neighbor_cell):
-					for j in grid[neighbor_cell]:
-						if i == j:
-							continue
-						
-						var other = enemies[j]
-						if other.health <= 0:
-							continue
+				var cell_list = grid.get(neighbor_cell)
+				
+				if cell_list != null:
+					var checks = 0
+					for other in cell_list: 
+						if e == other: continue 
+						if other.health <= 0: continue 
 						
 						var diff = e.position - other.position
-						var dist_squared = diff.length_squared()
+						var dist_sq = diff.length_squared()
 						
-						# Proteção contra NaN (Divisão por zero) / Linhas infinitas
-						if dist_squared < 0.1:
-							separation += Vector2(randf_range(-1, 1), randf_range(-1, 1)).normalized() * 10
-						elif dist_squared < 400: 
-							var dist = sqrt(dist_squared)
-							separation += (diff / dist) * (20 - dist)
+						if dist_sq > 0.1 and dist_sq < 400.0:
+							var push_strength = (400.0 - dist_sq) / 40.0
+							separation += diff * push_strength
+							
+							checks += 1
+							if checks >= 4:
+								break 
 
-		e.velocity += separation
-		e.position += e.velocity * delta
+		velocity += separation
+		e.position += velocity * delta
 
-		# Ataque ao player
-		if e.position.distance_squared_to(player.global_position) < (attack_radius * attack_radius):
+		# ATAQUE
+		if e.position.distance_squared_to(player_pos) < attack_rad_sq:
 			if player.has_method("take_damage"):
 				player.take_damage(attack_damage * delta)
 
-	# 3. LIMPEZA SEGURA (Removemos os mortos sem estragar os índices)
-	var sobreviventes = []
-	for e in enemies:
-		if e.health > 0:
-			sobreviventes.append(e)
+		# --- NOVO: ATUALIZAÇÃO VISUAL SEPARADA POR TIPO ---
+		var flip_x = -1.0 if velocity.x < 0 else 1.0
+		var trans = Transform2D(Vector2(flip_x, 0), Vector2(0, -1.0), e.position)
+		
+		if e.is_tank:
+			if multimesh_instance_tanks and multimesh_instance_tanks.multimesh:
+				multimesh_instance_tanks.multimesh.set_instance_transform_2d(tank_count, trans)
+			tank_count += 1
 		else:
-			spawn_gem(e.position, e.xp_value) # Larga a gema ao morrer
-	
-	# Substituímos a lista antiga pela nova lista limpa
-	enemies = sobreviventes
+			if multimesh_instance and multimesh_instance.multimesh:
+				multimesh_instance.multimesh.set_instance_transform_2d(normal_count, trans)
+			normal_count += 1
+		
+		i -= 1
 
-	# 4. ATUALIZAÇÃO VISUAL NO MULTIMESH
-	multimesh_instance.multimesh.visible_instance_count = enemies.size()
-	for i in range(enemies.size()):
-		var e = enemies[i]
-		
-		var flip_x = -1.0 if e.velocity.x < 0 else 1.0
-		var flip_y = -1.0 
-		
-		var trans = Transform2D(
-			Vector2(flip_x, 0), 
-			Vector2(0, flip_y), 
-			e.position          
-		)
-		
-		multimesh_instance.multimesh.set_instance_transform_2d(i, trans)
+	# Esconde os inimigos que não existem nas duas listas
+	if multimesh_instance and multimesh_instance.multimesh:
+		multimesh_instance.multimesh.visible_instance_count = normal_count
+	if multimesh_instance_tanks and multimesh_instance_tanks.multimesh:
+		multimesh_instance_tanks.multimesh.visible_instance_count = tank_count
+
+	debug_print_timer += delta
+	if debug_print_timer >= 1.0:
+		print("Horda: ", normal_count, " | Tanks: ", tank_count, " | FPS: ", Engine.get_frames_per_second())
+		debug_print_timer = 0.0
 
 # ========================
-# FUNÇÃO DE DAR DANO A INIMIGOS (Geral)
+# FUNÇÕES EXTRAS
 # ========================
 func damage_enemy_at_position(pos: Vector2, damage: int):
+	var attack_rad_sq = attack_radius * attack_radius
 	for e in enemies:
-		if e.position.distance_to(pos) < attack_radius: # attack_radius é o tamanho do hitbox
+		if e.position.distance_squared_to(pos) < attack_rad_sq:
 			e.health -= damage
-			break # aplica dano a 1 inimigo por vez
+			break 
 
-# ========================
-# FUNÇÃO DE LIMPAR TODOS INIMIGOS
-# ========================
-func clear_all_enemies():
-	enemies.clear()
-	multimesh_instance.multimesh.visible_instance_count = 0
-
-# ========================
-# COLISÃO COM BALAS
-# ========================
 func check_bullet_hit(bullet_pos: Vector2, hit_radius: float, damage: int) -> bool:
 	var hit_confirmed = false
 	var radius_squared = hit_radius * hit_radius
 	
 	for i in range(enemies.size() - 1, -1, -1):
 		var e = enemies[i]
-		
 		if e.position.distance_squared_to(bullet_pos) < radius_squared:
-			# Damos apenas o dano. A limpeza (Fase 3 do _process) tratará de apagá-lo!
 			e.health -= damage
 			hit_confirmed = true
 			break 
 			
 	return hit_confirmed
+	
+func clear_all_enemies():
+	enemies.clear()
+	if multimesh_instance and multimesh_instance.multimesh:
+		multimesh_instance.multimesh.visible_instance_count = 0
+	if multimesh_instance_tanks and multimesh_instance_tanks.multimesh:
+		multimesh_instance_tanks.multimesh.visible_instance_count = 0

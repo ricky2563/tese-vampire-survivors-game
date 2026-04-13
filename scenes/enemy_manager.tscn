@@ -1,13 +1,15 @@
-[gd_scene load_steps=4 format=3 uid="uid://cmb1my775wjvl"]
+[gd_scene load_steps=5 format=3 uid="uid://cmb1my775wjvl"]
 
 [ext_resource type="Script" uid="uid://cp5lagfg5lpsc" path="res://scripts/enemy_manager.gd" id="1_sqyd6"]
 [ext_resource type="Texture2D" uid="uid://c4rt6pnaw3py" path="res://art/enemy_skeleton_right.png" id="2_i6mmg"]
 [ext_resource type="PackedScene" uid="uid://dmprd5w076xb7" path="res://scenes/gem.tscn" id="3_m8so1"]
+[ext_resource type="Texture2D" uid="uid://bgkd5nbfjsu3p" path="res://art/tree_enemy.png" id="4_aojfi"]
 
 [node name="EnemyManager" type="Node2D"]
 script = ExtResource("1_sqyd6")
 enemy_sprite = ExtResource("2_i6mmg")
 gem_scene = ExtResource("3_m8so1")
 enemy_size = Vector2(80, 90)
+tank_sprite = ExtResource("4_aojfi")
 
 [node name="EnemiesMesh" type="MultiMeshInstance2D" parent="."]

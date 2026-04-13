@@ -36,28 +36,24 @@ func apply_upgrade(type):
 	var gun = player.get_node("gun")
 	
 	match type:
-		# ========================
-		# BOW
-		# ========================
+		# --- BOW UPGRADES ---
 		"bow_amount":
 			gun.amount_level += 1
 			player.weapons["bow"]["level"] += 1
-		
 		"bow_piercing":
 			gun.piercing_level += 1
 			player.weapons["bow"]["level"] += 1
-		
 		"bow_triple":
 			gun.triple_shot = true
 			player.weapons["bow"]["level"] += 1
-		
-		# ========================
-		# GLOBAL
-		# ========================
+		"bow_multishot":
+			gun.multi_direction_level += 1
+			player.weapons["bow"]["level"] += 1
+			
+		# --- GLOBAL ---
 		"pickup_range":
 			if player.pickup_range_level < 5:
 				player.pickup_range_level += 1
-				
 				var gems = get_tree().get_nodes_in_group("gem")
 				for gem in gems:
 					gem.update_pickup_range()
@@ -76,11 +72,13 @@ func setup_button(button, type):
 			button.text = "Bow: Triple Shot"
 		"bow_piercing":
 			button.text = "Bow: Piercing +" + str(gun.piercing_level + 1)
+		"bow_multishot":
+			var lados = ["Frente/Trás", "4 Lados"]
+			var idx = min(gun.multi_direction_level, 1)
+			button.text = "Bow: " + lados[idx]
 		"pickup_range":
 			button.text = "Pickup Range +" + str(player.pickup_range_level + 1)
 		"nothing":
 			button.text = "Nada"
-		"nothing2":
-			button.text = "Nada 2"
 	
 	button.pressed.connect(func(): apply_upgrade(type))

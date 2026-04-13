@@ -29,8 +29,9 @@ position = Vector2(2, -1)
 shape = SubResource("RectangleShape2D_nsgjb")
 
 [node name="AttackTimer" type="Timer" parent="."]
-wait_time = 5.0
+wait_time = 6.0
 
 [node name="AttackSound" type="AudioStreamPlayer2D" parent="."]
+bus = &"Threats"
 
 [connection signal="timeout" from="AttackTimer" to="." method="_on_attack_timer_timeout"]

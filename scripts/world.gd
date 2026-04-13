@@ -45,6 +45,8 @@ func _ready():
 # TIME CONTROL
 # ========================
 
+var cage_spawned = false
+
 func _process(delta):
 	game_time += delta
 	
@@ -52,57 +54,63 @@ func _process(delta):
 	var seconds = int(game_time) % 60
 	$CanvasLayer/GameTime.text = str(minutes) + ":" + str(seconds).pad_zeros(2)
 	
-	if game_time >= 90.0 and not barrier_right_spawned:
+	# EVENTO: A Gaiola de Caos (Aos 1 minuto)
+	if game_time >= 60.0 and not cage_spawned:
 		spawn_barrier_right()
-		barrier_right_spawned = true # Bloqueia para não spawnar mais
-		print("EVENTO: Barreira de sobrevivência aos 1:30!")
-	if game_time >= 105.0 and not barrier_left_spawned:
 		spawn_barrier_left()
-		barrier_left_spawned = true
-		print("EVENTO: Barreira ESQUERDA!")
-	if game_time > 120 and not boss_fire_spawned:
+		spawn_barrier_top()    # (Nova função abaixo)
+		spawn_barrier_bottom() # (Nova função abaixo)
+		cage_spawned = true
+		print("EVENTO: Gaiola de Sobrevivência Ativada!")
+		
+	# EVENTO: O Fire Boss aparece 5 segundos depois da Gaiola fechar
+	if game_time >= 65.0 and not boss_fire_spawned:
 		spawn_boss_fire()
 		boss_fire_spawned = true
+		print("EVENTO: Fire Boss entrou na Gaiola!")
 
 # ========================
 # MAIN SPAWNER (Game states)
 # ========================
 func _on_enemy_spawner_timeout():
-	# AGORA PERGUNTA AO ENEMY MANAGER O TAMANHO DO ARRAY
 	if EnemyManager.enemies.size() >= max_enemies:
 		return
 	
-	if game_time < 60:
+	if game_time < 30:
 		early_game()
-	elif game_time < 150:
+	elif game_time < 60:
 		mid_game()
 	else:
 		late_game()
 		
 # ========================
-# GAME STATES
+# GAME STATES MUDADOS PARA CAOS
 # ========================
 func early_game():
-	for i in range(2):
+	# Começa calmo
+	for i in range(5):
 		spawn_enemy_around_player(700)
 		
 func mid_game():
-	for i in range(4):
-		spawn_enemy_around_player(700)
+	# Já manda pacotes de 15 inimigos e hordas frequentes
+	for i in range(15):
+		spawn_enemy_around_player(800)
 	
-	# pequena horda ocasional
-	if randi() % 3 == 0:
+	if randi() % 4 == 0:
 		spawn_horde()
 
 func late_game():
-	for i in range(6):
-		spawn_enemy_around_player(700)
-	
-	spawn_horde()
-	
-	# boss ocasional
-	if randf() < 0.3:
-		spawn_boss()
+	# 1. Nasce "carne para canhão" (15 esqueletos rápidos)
+	for i in range(15):
+		spawn_enemy_around_player(600, false)
+		
+	# 2. Nascem TANKS (Paredes de betão móveis para bloquear os tiros)
+	for i in range(8):
+		spawn_enemy_around_player(650, true) 
+		
+	# 3. Pequeno evento de Horda frequente para obfuscar a visão
+	if randi() % 3 == 0:
+		spawn_horde()
 
 # ========================
 # SCENARIO 1 — CONTÍNUO
@@ -186,7 +194,7 @@ func spawn_line_horde():
 			spawn_enemy_at(base_position + offset)
 
 # ========================
-# SCENARIO 5 — BARREIRA (Lado Direito)
+# SCENARIO 5 — BARREIRA
 # ========================
 func spawn_barrier_right():
 	var player = get_player()
@@ -212,10 +220,10 @@ func spawn_barrier_right():
 				start_y + (row * spacing)
 			)
 			
-			# Pequeno toque: um desvio aleatório minúsculo para a parede parecer mais orgânica e não 100% robótica
 			spawn_pos += Vector2(randf_range(-5, 5), randf_range(-5, 5))
 			
-			spawn_enemy_at(spawn_pos)
+			spawn_enemy_at(spawn_pos, true)
+		await get_tree().process_frame
 
 func spawn_barrier_left():
 	var player = get_player()
@@ -240,7 +248,46 @@ func spawn_barrier_left():
 				start_y + (row * spacing)
 			)
 			spawn_pos += Vector2(randf_range(-5, 5), randf_range(-5, 5))
-			spawn_enemy_at(spawn_pos)
+			spawn_enemy_at(spawn_pos, true)
+		await get_tree().process_frame
+
+func spawn_barrier_top():
+	var player = get_player()
+	if not player: return
+		
+	var distance_to_top = 500 
+	var columns = 25  # Agora a largura é grande (25 inimigos de lado a lado)
+	var rows = 3      # E a espessura é 3
+	var spacing = 40
+	
+	var center_pos = player.global_position + Vector2(0, -distance_to_top)
+	var start_x = center_pos.x - ((columns * spacing) / 2.0)
+	
+	for col in range(columns):
+		for row in range(rows):
+			var spawn_pos = Vector2(start_x + (col * spacing), center_pos.y - (row * spacing))
+			spawn_pos += Vector2(randf_range(-5, 5), randf_range(-5, 5))
+			spawn_enemy_at(spawn_pos, true)
+		await get_tree().process_frame
+
+func spawn_barrier_bottom():
+	var player = get_player()
+	if not player: return
+		
+	var distance_to_bottom = 500 
+	var columns = 25  
+	var rows = 3      
+	var spacing = 40
+	
+	var center_pos = player.global_position + Vector2(0, distance_to_bottom)
+	var start_x = center_pos.x - ((columns * spacing) / 2.0)
+	
+	for col in range(columns):
+		for row in range(rows):
+			var spawn_pos = Vector2(start_x + (col * spacing), center_pos.y + (row * spacing))
+			spawn_pos += Vector2(randf_range(-5, 5), randf_range(-5, 5))
+			spawn_enemy_at(spawn_pos, true)
+		await get_tree().process_frame
 
 # ========================
 # SPAWN BOSS (GENÉRICO)
@@ -290,19 +337,17 @@ func get_player():
 		return p
 	return null
 
-func spawn_enemy_around_player(distance):
+func spawn_enemy_around_player(distance, is_tank = false):
 	var player = get_player()
-	if not player:
-		return
+	if not player: return
 	
 	var dir = Vector2.RIGHT.rotated(randf_range(0, TAU))
 	var pos = player.global_position + (dir * distance)
 	
-	spawn_enemy_at(pos)
+	spawn_enemy_at(pos, is_tank)
 
-func spawn_enemy_at(pos):
-	# CHAMA O MANAGER GLOBAL EM VEZ DE INSTANCIAR CENA!
-	EnemyManager.spawn_enemy(pos, false)
+func spawn_enemy_at(pos, is_tank = false):
+	EnemyManager.spawn_enemy(pos, false, is_tank)
 
 # ========================
 # DEBUG CONTROLS (OPCIONAL)

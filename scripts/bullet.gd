@@ -7,7 +7,7 @@ var piercing = 0
 var enemies_hit = []
 
 # --- NOVAS VARIÁVEIS ---
-var damage = 50
+var damage = 30
 var hit_radius = 20.0 # O tamanho da "área de impacto" matemática da bala
 var hit_cooldown = 0.0 # Impede que a bala acerte no mesmo inimigo 60 vezes num segundo
 

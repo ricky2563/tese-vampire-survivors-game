@@ -150,7 +150,6 @@ func take_damage(amount):
 		return
 	health -= amount
 	health_bar.value = health 
-	print("Auch! Vida restante: ", health)
 	if health <= 0:
 		die()
 
@@ -191,11 +190,13 @@ func get_weapon_upgrade(weapon_name, level):
 		"bow":
 			match level:
 				0: return "bow_amount"
-				1: return "bow_amount"
-				2: return "bow_piercing"
+				1: return "bow_piercing"
+				2: return "bow_multishot" # Desbloqueia Frente/Trás 
 				3: return "bow_amount"
-				4: return "bow_triple"
+				4: return "bow_triple"    # Triple shot para os dois lados!
 				5: return "bow_piercing"
-				6: return "bow_piercing"
-	
+				6: return "bow_amount"
+				7: return "bow_multishot" # 4 direções (Cruz)
+				8: return "bow_piercing"
+								
 	return "none"
