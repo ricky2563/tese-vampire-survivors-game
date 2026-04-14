@@ -1,14 +1,14 @@
 extends CharacterBody2D
 
 @export var speed = 150.0
-@export var health = 100.0
+@export var max_health = 100.0
 
 @onready var health_bar = $HealthBar
 @onready var level_label = $HUD/LevelLabel
 @onready var umbrella_icon = $HUD/WeaponsContainer/IconUmbrella
 
 # --- NOVO: Referência para o AnimatedSprite2D ---
-@onready var anim = $AnimatedSprite2D 
+@onready var anim = $AnimatedSprite2D
 
 @export var experience = 0
 @export var experience_required = 20
@@ -17,10 +17,19 @@ extends CharacterBody2D
 
 @onready var experience_bar = $HUD/ExperienceBar
 
-# --- NOVO: Variável para lembrar para onde estamos a olhar ---
-var is_facing_right = true 
+# --- Variáveis de Atributos ---
+var health = 100.0
+var armor = 0.0
+var health_regen = 0.0
+
 var upgrades_owned = []
 var pickup_range_level = 0
+var max_health_level = 0
+var armor_level = 0
+var regen_level = 0
+var move_speed_level = 0
+
+var is_facing_right = true 
 var is_dead = false
 var can_umbrella = true
 var umbrella_cooldown = 5.0
@@ -101,7 +110,8 @@ func deploy_umbrella():
 	print("Guarda-chuva pronto a usar! HUD atualizada.")
 
 func _ready():
-	health_bar.max_value = health
+	health = max_health
+	health_bar.max_value = max_health
 	health_bar.value = health
 	
 	experience_bar.max_value = experience_required
@@ -113,20 +123,23 @@ func _ready():
 	anim.play("idle_right")
 
 func _physics_process(delta):
+	# --- ALTERAÇÃO AQUI: Lógica da Regeneração de Vida ---
+	if health < max_health and health_regen > 0:
+		health += health_regen * delta
+		health = min(health, max_health)
+		health_bar.value = health
+
 	var direction = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	
 	if direction:
 		velocity = direction * speed
 		
-		# --- NOVO: Lógica de Direção ---
-		# Se mover para a direita, atualiza a memória para true
+		# --- Lógica de Direção ---
 		if direction.x > 0:
 			is_facing_right = true
-		# Se mover para a esquerda, atualiza a memória para false
 		elif direction.x < 0:
 			is_facing_right = false
 			
-		# Toca a animação de correr com o sufixo correto (_left ou _right)
 		if is_facing_right:
 			anim.play("move_right")
 		else:
@@ -135,8 +148,7 @@ func _physics_process(delta):
 	else:
 		velocity = velocity.move_toward(Vector2.ZERO, speed)
 		
-		# --- NOVO: Lógica de Parar ---
-		# Quando para, usa a memória (is_facing_right) para saber que idle usar
+		# --- Lógica de Parar ---
 		if is_facing_right:
 			anim.play("idle_right")
 		else:
@@ -148,8 +160,14 @@ func take_damage(amount):
 	# Se o jogador já estiver morto, sai da função imediatamente e ignora o ataque!
 	if is_dead:
 		return
-	health -= amount
+		
+	var damage_reduction = armor * 0.10 # Corta 10% por nível
+	var actual_damage = amount * (1.0 - damage_reduction)
+	actual_damage = max(0.0, actual_damage)
+	
+	health -= actual_damage
 	health_bar.value = health 
+	
 	if health <= 0:
 		die()
 
@@ -191,12 +209,12 @@ func get_weapon_upgrade(weapon_name, level):
 			match level:
 				0: return "bow_amount"
 				1: return "bow_piercing"
-				2: return "bow_multishot" # Desbloqueia Frente/Trás 
+				2: return "bow_multishot" 
 				3: return "bow_amount"
-				4: return "bow_triple"    # Triple shot para os dois lados!
+				4: return "bow_triple"   
 				5: return "bow_piercing"
 				6: return "bow_amount"
-				7: return "bow_multishot" # 4 direções (Cruz)
+				7: return "bow_multishot" 
 				8: return "bow_piercing"
 								
 	return "none"
