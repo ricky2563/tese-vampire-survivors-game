@@ -1,4 +1,4 @@
-[gd_scene load_steps=10 format=3 uid="uid://cgfy2a4d6eww1"]
+[gd_scene load_steps=18 format=3 uid="uid://cgfy2a4d6eww1"]
 
 [ext_resource type="Texture2D" uid="uid://pf43w664fc6p" path="res://art/boss_fogo.png" id="1_h8q6f"]
 [ext_resource type="Script" uid="uid://vftbrktvsytp" path="res://scripts/fire_boss.gd" id="1_nsgjb"]
@@ -8,9 +8,52 @@
 [ext_resource type="PackedScene" uid="uid://b40lxg72i0atw" path="res://scenes/fire_ring.tscn" id="5_bbvdf"]
 [ext_resource type="AudioStream" uid="uid://c7b1cy76vs7q1" path="res://audio/fire_ring_charge.wav" id="5_mw820"]
 [ext_resource type="AudioStream" uid="uid://dshfyd182lnkb" path="res://audio/hand_pre_audio.wav" id="6_dh0d8"]
+[ext_resource type="AudioStream" uid="uid://c8semhtskdwil" path="res://audio/stop_warning.wav" id="7_8yh2n"]
+[ext_resource type="AudioStream" uid="uid://np34dr5ykkyc" path="res://audio/stop_snap.mp3" id="8_lo3o5"]
+[ext_resource type="Texture2D" uid="uid://bh6s7kal633ei" path="res://art/boss_fogo_attacks.png" id="9_wgrw4"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_nsgjb"]
 size = Vector2(122, 120)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_gvqsq"]
+atlas = ExtResource("9_wgrw4")
+region = Rect2(0, 216, 192, 216)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_8yh2n"]
+atlas = ExtResource("9_wgrw4")
+region = Rect2(384, 0, 192, 216)
+
+[sub_resource type="AtlasTexture" id="AtlasTexture_lo3o5"]
+atlas = ExtResource("9_wgrw4")
+region = Rect2(192, 0, 192, 216)
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_j4vko"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_gvqsq")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_8yh2n")
+}, {
+"duration": 1.0,
+"texture": SubResource("AtlasTexture_lo3o5")
+}],
+"loop": false,
+"name": &"stop_attack",
+"speed": 5.0
+}]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_8yh2n"]
+content_margin_left = 8.0
+content_margin_top = 8.0
+content_margin_right = 8.0
+content_margin_bottom = 8.0
+bg_color = Color(1, 1, 1, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
 [node name="FireBoss" type="CharacterBody2D"]
 script = ExtResource("1_nsgjb")
@@ -19,6 +62,8 @@ meteor_scene = ExtResource("3_8gh2r")
 sound_fireball_cast = ExtResource("4_ffb7q")
 sound_ring_warning = ExtResource("5_mw820")
 sound_hand_cast = ExtResource("6_dh0d8")
+sound_stop_warning = ExtResource("7_8yh2n")
+sound_stop_snap = ExtResource("8_lo3o5")
 fire_ring_scene = ExtResource("5_bbvdf")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
@@ -35,5 +80,26 @@ wait_time = 6.0
 
 [node name="AttackSound" type="AudioStreamPlayer2D" parent="."]
 bus = &"Threats"
+
+[node name="stop_attack" type="AnimatedSprite2D" parent="."]
+visible = false
+position = Vector2(2.4375005, -7.9999967)
+scale = Vector2(0.76627606, 0.7962963)
+sprite_frames = SubResource("SpriteFrames_j4vko")
+animation = &"stop_attack"
+frame = 2
+frame_progress = 1.0
+
+[node name="SpeechBubble" type="PanelContainer" parent="."]
+visible = false
+offset_left = 50.0
+offset_top = -81.0
+offset_right = 96.0
+offset_bottom = -42.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_8yh2n")
+
+[node name="Label" type="Label" parent="SpeechBubble"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0, 0, 1)
 
 [connection signal="timeout" from="AttackTimer" to="." method="_on_attack_timer_timeout"]

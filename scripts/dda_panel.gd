@@ -6,11 +6,19 @@ extends CanvasLayer
 var complication_player: AudioStreamPlayer
 var bus_horde: int
 var bus_threats: int
+var bus_hand: int
+var bus_meteor: int
+var bus_music: int
+var bus_stop: int
 
 func _ready():
 	# Guarda os IDs da mesa de mistura
 	bus_horde = AudioServer.get_bus_index("Horde")
 	bus_threats = AudioServer.get_bus_index("Threats")
+	bus_hand = AudioServer.get_bus_index("Attack_Hand")
+	bus_meteor = AudioServer.get_bus_index("Attack_Meteor")
+	bus_music = AudioServer.get_bus_index("Music")
+	bus_stop = AudioServer.get_bus_index("Attack_Stop")
 	
 	# Cria o leitor de áudio para as complicações automaticamente
 	complication_player = AudioStreamPlayer.new()
@@ -33,3 +41,15 @@ func _on_slider_boss_value_changed(value):
 
 func _on_slider_horda_value_changed(value):
 	AudioServer.set_bus_volume_db(bus_horde, value)
+	
+func _on_slider_hand_value_changed(value):
+	AudioServer.set_bus_volume_db(bus_hand, value)
+	
+func _on_slider_meteor_value_changed(value):
+	AudioServer.set_bus_volume_db(bus_meteor, value)
+	
+func _on_slider_music_value_changed(value):
+	AudioServer.set_bus_volume_db(bus_music, value)
+	
+func _on_slider_stop_value_changed(value):
+	AudioServer.set_bus_volume_db(bus_stop, value)
