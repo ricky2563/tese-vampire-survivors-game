@@ -18,6 +18,8 @@ enum SpawnMode {
 # APAGÁMOS A ENEMY_SCENE DAQUI!
 @export var boss_scene: PackedScene
 @export var boss_scene_fire: PackedScene
+@export var dda_panel_scene: PackedScene
+var panel_instance: CanvasLayer
 
 # ========================
 # CONTROLO
@@ -78,7 +80,7 @@ func _on_enemy_spawner_timeout():
 	
 	if game_time < 30:
 		early_game()
-	elif game_time < 60:
+	elif game_time < 55:
 		mid_game()
 	else:
 		late_game()
@@ -375,6 +377,8 @@ func _input(event):
 				print("Boss FIRE spawnado")
 			KEY_SPACE:   # <--- tecla espaço
 				clear_enemies()
+			KEY_TAB:
+				toggle_panel()
 		update_label()
 
 func update_label():
@@ -391,3 +395,16 @@ func clear_enemies():
 	
 	enemies_spawned = 0
 	print("Tela limpa!")
+	
+func toggle_panel():
+	if panel_instance == null:
+		# Verifica se tu não te esqueceste de arrastar a cena no Inspector!
+		if dda_panel_scene != null:
+			panel_instance = dda_panel_scene.instantiate()
+			add_child(panel_instance)
+			print("Painel DDA Aberto pela 1ª vez.")
+		else:
+			print("ERRO: Esqueceste-te de arrastar o ficheiro painel_dda.tscn para a variável no World!")
+	else:
+		# Se já existe, liga e desliga a visibilidade
+		panel_instance.visible = !panel_instance.visible

@@ -21,6 +21,13 @@ extends Node2D
 @export var tank_health = 200
 
 # ========================
+# AUDIO DA HORDA
+# ========================
+@export var sound_step: AudioStream
+var horde_audio_player: AudioStreamPlayer
+var sound_timer = 0.0
+
+# ========================
 # VARIÁVEIS INTERNAS
 # ========================
 var enemies = []
@@ -67,6 +74,13 @@ func _ready():
 	mm_tank.instance_count = max_enemies
 	mm_tank.visible_instance_count = 0
 	multimesh_instance_tanks.multimesh = mm_tank
+
+	horde_audio_player = AudioStreamPlayer.new()
+	horde_audio_player.bus = "Horde"
+	
+	horde_audio_player.max_polyphony = 16 
+	
+	add_child(horde_audio_player)
 
 # ========================
 # SPAWN DE INIMIGOS (ATUALIZADO)
@@ -205,6 +219,25 @@ func _process(delta):
 		multimesh_instance.multimesh.visible_instance_count = normal_count
 	if multimesh_instance_tanks and multimesh_instance_tanks.multimesh:
 		multimesh_instance_tanks.multimesh.visible_instance_count = tank_count
+	
+	var total_enemies = enemies.size()
+	
+	if total_enemies > 0 and sound_step:
+		var chaos_factor = min(total_enemies / 150.0, 1.0)
+		
+		var play_interval = lerp(0.6, 0.3, chaos_factor)
+		
+		var volume_db = lerp(-25.0, -8.0, chaos_factor)
+		
+		horde_audio_player.volume_db = volume_db
+		
+		sound_timer += delta
+		if sound_timer >= play_interval:
+			horde_audio_player.stream = sound_step
+			horde_audio_player.pitch_scale = randf_range(0.7, 1.4) 
+			horde_audio_player.play()
+			
+			sound_timer = randf_range(-0.05, 0.05)
 
 	debug_print_timer += delta
 	if debug_print_timer >= 1.0:

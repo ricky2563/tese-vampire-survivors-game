@@ -1,6 +1,6 @@
 extends Node2D
 
-@export var fall_time = 1.0
+@export var fall_time = 0.5
 @export var damage = 25
 @export var shadow_scene: PackedScene
 
