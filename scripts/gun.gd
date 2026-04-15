@@ -72,3 +72,13 @@ func spawn_bullet(angle):
 	
 	# Passar apenas o piercing
 	bullet.piercing = piercing_level
+	
+	# --- NOVOS BUFFS (DANO EXTRA E CRÍTICO) ---
+	if "damage" in bullet and player:
+		# 1. Soma o dano extra dos upgrades passivos
+		bullet.damage += player.extra_damage 
+		
+		# 2. Rola os dados para ver se a flecha dá CRÍTICO!
+		if randf() < player.crit_chance:
+			bullet.damage *= 2 # Duplica o dano
+			bullet.modulate = Color(1.0, 0.8, 0.0) # Pinta a flecha de amarelo/dourado

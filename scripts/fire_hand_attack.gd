@@ -1,6 +1,6 @@
 extends Area2D
 
-@export var damage = 20
+@export var damage = 25
 @export var track_duration = 1.5   
 @export var follow_speed = 6.0     
 

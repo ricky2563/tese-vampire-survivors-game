@@ -5,6 +5,9 @@ extends Area2D
 var base_pickup_radius = 20
 
 func _ready():
+	# --- NOVO: Adiciona a gema ao grupo para o EnemyManager conseguir contá-las! ---
+	add_to_group("gem")
+	
 	update_pickup_range()
 	
 func update_pickup_range():
@@ -13,7 +16,8 @@ func update_pickup_range():
 	if not player:
 		return
 	
-	var shape = $CollisionShape2D.shape
+	var shape = $CollisionShape2D.shape.duplicate()
+	$CollisionShape2D.shape = shape
 	
 	# cada nível aumenta 10 pixels
 	var bonus = player.pickup_range_level * 10

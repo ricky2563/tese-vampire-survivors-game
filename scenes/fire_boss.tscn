@@ -56,6 +56,8 @@ corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
 [node name="FireBoss" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 0
 script = ExtResource("1_nsgjb")
 fire_hand_scene = ExtResource("2_smdvo")
 meteor_scene = ExtResource("3_8gh2r")

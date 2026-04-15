@@ -29,6 +29,8 @@ func _ready():
 	if player.armor_level < 5: other_upgrades.append("armor")
 	if player.regen_level < 5: other_upgrades.append("health_regen")
 	if player.move_speed_level < 5: other_upgrades.append("move_speed")
+	if player.bonus_damage_level < 5: other_upgrades.append("bonus_damage")
+	if player.luck_level < 5: other_upgrades.append("luck")
 	
 	# ==========================================
 	# 3. MONTAR A SELEÇÃO FINAL
@@ -123,6 +125,14 @@ func apply_upgrade(type):
 			player.move_speed_level += 1
 			player.speed += 5.0
 			
+		"bonus_damage":
+			player.bonus_damage_level += 1
+			player.extra_damage += 5
+			
+		"luck":
+			player.luck_level += 1
+			player.crit_chance += 0.10
+			
 		# --- ALTERAÇÃO AQUI: Lógica de Cura ---
 		"heal":
 			player.health += 5.0
@@ -151,6 +161,8 @@ func setup_button(button, type):
 		"armor": button.text = "Armor +1 (Lv " + str(player.armor_level + 1) + ")"
 		"health_regen": button.text = "Regen +0.1/s (Lv " + str(player.regen_level + 1) + ")"
 		"move_speed": button.text = "Speed +5 (Lv " + str(player.move_speed_level + 1) + ")"
+		"bonus_damage": button.text = "Damage +5 (Lv " + str(player.bonus_damage_level + 1) + ")"
+		"luck": button.text = "Crit Chance +10% (Lv " + str(player.luck_level + 1) + ")"
 		"heal": button.text = "Heal 5 HP" # O novo botão de recompensa contínua
 	
 	# Os botões agora estão sempre ativos (removi o disabled)

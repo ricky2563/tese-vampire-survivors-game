@@ -4,11 +4,13 @@ extends Node2D
 # CONFIGURAÇÃO GERAL
 # ========================
 @export var enemy_sprite: Texture2D
+@export var elite_sprite: Texture2D # NOVO: O sprite do inimigo elite!
 @export var gem_scene: PackedScene
-@export var max_enemies = 700
+@export var max_enemies = 1200 # Aumentado para suportar o End Game
 @export var attack_radius = 30.0
 @export var attack_damage = 5
 @export var enemy_size = Vector2(32, 32)
+@export var elite_scale = 2
 
 # ========================
 # CONFIGURAÇÃO DOS INIMIGOS
@@ -18,7 +20,9 @@ extends Node2D
 
 @export var tank_sprite: Texture2D
 @export var tank_speed = 40.0    
-@export var tank_health = 200
+@export var tank_health = 150
+
+var difficulty_multiplier = 1.0 # NOVO: Controla a dificuldade global
 
 # ========================
 # AUDIO DA HORDA
@@ -31,11 +35,10 @@ var sound_timer = 0.0
 # VARIÁVEIS INTERNAS
 # ========================
 var enemies = []
-var grid_size = 40 
-var grid = {}
 var player = null
 var multimesh_instance: MultiMeshInstance2D
-var multimesh_instance_tanks: MultiMeshInstance2D # NOVO: O MultiMesh dos Tanks
+var multimesh_instance_elites: MultiMeshInstance2D # NOVO
+var multimesh_instance_tanks: MultiMeshInstance2D
 var debug_print_timer = 0.0
 var pending_xp = 0
 
@@ -57,9 +60,27 @@ func _ready():
 	mm.visible_instance_count = 0
 	multimesh_instance.multimesh = mm
 
-	# --- NOVO: MULTIMESH DOS TANKS ---
+	# --- NOVO: MULTIMESH DOS ELITES ---
+	multimesh_instance_elites = MultiMeshInstance2D.new()
+	add_child(multimesh_instance_elites)
+	
+	var mm_elite = MultiMesh.new()
+	mm_elite.transform_format = MultiMesh.TRANSFORM_2D
+	var quad_elite = QuadMesh.new()
+	quad_elite.size = enemy_size
+	mm_elite.mesh = quad_elite
+	
+	var mat_elite = CanvasItemMaterial.new()
+	multimesh_instance_elites.material = mat_elite
+	multimesh_instance_elites.texture = elite_sprite # Atribui a textura elite
+	
+	mm_elite.instance_count = max_enemies
+	mm_elite.visible_instance_count = 0
+	multimesh_instance_elites.multimesh = mm_elite
+
+	# --- MULTIMESH DOS TANKS ---
 	multimesh_instance_tanks = MultiMeshInstance2D.new()
-	add_child(multimesh_instance_tanks) # Adiciona à cena automaticamente
+	add_child(multimesh_instance_tanks)
 	
 	var mm_tank = MultiMesh.new()
 	mm_tank.transform_format = MultiMesh.TRANSFORM_2D
@@ -77,24 +98,46 @@ func _ready():
 
 	horde_audio_player = AudioStreamPlayer.new()
 	horde_audio_player.bus = "Horde"
-	
 	horde_audio_player.max_polyphony = 16 
-	
 	add_child(horde_audio_player)
 
 # ========================
-# SPAWN DE INIMIGOS (ATUALIZADO)
+# SPAWN DE INIMIGOS
 # ========================
 func spawn_enemy(pos: Vector2, is_boss=false, is_tank=false):
 	if enemies.size() >= max_enemies:
 		return
 
+	var is_elite = false
+	if not is_tank and not is_boss:
+		if difficulty_multiplier >= 1.45:
+			is_elite = true
+
+	var base_spd = tank_speed if is_tank else enemy_speed
+	var actual_speed = base_spd * randf_range(0.85, 1.15)
+	
+	var final_health = 0.0
+	
+	if is_tank:
+		var tank_multiplier = lerp(1.0, difficulty_multiplier, 0.3) 
+		final_health = tank_health * tank_multiplier
+	else:
+		var health_multiplier = min(difficulty_multiplier, 2.0)
+		final_health = enemy_health * health_multiplier
+		
+		if is_elite: 
+			final_health *= 1.5 
+		
+	var wobble_phase = randf_range(0.0, TAU)
+
 	var enemy = {
 		"position": pos,
-		"health": tank_health if is_tank else enemy_health,
-		"speed": tank_speed if is_tank else enemy_speed,
-		"xp_value": 100 if is_boss else (30 if is_tank else 10),
-		"is_tank": is_tank # NOVO: Guarda a informação se é tank
+		"health": final_health,
+		"speed": actual_speed,
+		"xp_value": 100 if is_boss else (30 if is_tank else (20 if is_elite else 10)),
+		"is_tank": is_tank,
+		"is_elite": is_elite, 
+		"wobble_phase": wobble_phase
 	}
 	enemies.append(enemy)
 
@@ -102,26 +145,31 @@ func spawn_gem(pos: Vector2, xp_value: int):
 	if gem_scene == null: return
 	
 	pending_xp += xp_value
-	
-	var drop_chance = 1.0 
-	
-	if enemies.size() > 400:
-		drop_chance = 0.1 
-	elif enemies.size() > 150:
-		drop_chance = 0.25 
+	var current_gems = get_tree().get_node_count_in_group("gem")
 		
-	if randf() < drop_chance or pending_xp >= 100:
+	var drop_chance = 1.0 
+	if enemies.size() > 400:
+		drop_chance = 0.05
+	elif enemies.size() > 150:
+		drop_chance = 0.15 
+		
+	if pending_xp >= 200 or (current_gems <= 40 and randf() < drop_chance):
 		var gem = gem_scene.instantiate()
 		gem.global_position = pos
+		
 		gem.xp_amount = pending_xp 
-		if pending_xp >= 50:
+		
+		if pending_xp >= 200:
+			gem.scale = Vector2(2.0, 2.0)
+			gem.modulate = Color(1.0, 0.5, 0.0) # Gema VIP Laranja
+		elif pending_xp >= 50:
 			gem.scale = Vector2(1.5, 1.5)
 			
 		get_tree().root.call_deferred("add_child", gem)
-		pending_xp = 0 
+		pending_xp = 0
 
 # ========================
-# PROCESSO SUPER OTIMIZADO
+# PROCESSO EXTREMAMENTE OTIMIZADO
 # ========================
 func _process(delta):
 	if not is_instance_valid(player):
@@ -131,26 +179,17 @@ func _process(delta):
 	var player_pos = player.global_position
 	var attack_rad_sq = attack_radius * attack_radius
 
-	# 1. PREENCHER A GRID 
-	grid.clear()
-	for e in enemies:
-		var cell = Vector2(int(e.position.x / grid_size), int(e.position.y / grid_size))
-		var cell_list = grid.get(cell)
-		if cell_list == null:
-			grid[cell] = [e] 
-		else:
-			cell_list.append(e)
-
-	# NOVO: Contadores separados para os gráficos
 	var normal_count = 0
+	var elite_count = 0 # NOVO
 	var tank_count = 0
+	
+	var trans := Transform2D()
+	trans.y = Vector2(0, -1.0) 
 
-	# 2. ITERAR INIMIGOS DE TRÁS PARA A FRENTE
 	var i = enemies.size() - 1
 	while i >= 0:
 		var e = enemies[i]
 		
-		# MORTE E LIMPEZA 
 		if e.health <= 0:
 			spawn_gem(e.position, e.xp_value)
 			enemies[i] = enemies[enemies.size() - 1]
@@ -158,55 +197,38 @@ func _process(delta):
 			i -= 1
 			continue
 
-		# DIREÇÃO
 		var diff_to_player = player_pos - e.position
 		var velocity = Vector2.ZERO
+		var dist_sq = diff_to_player.length_squared()
 		
-		if diff_to_player.length_squared() > 1.0:
-			velocity = diff_to_player.normalized() * e.speed
+		if dist_sq > 1.0:
+			var dist = sqrt(dist_sq)
+			var dir_to_player = diff_to_player / dist
+			
+			var wobble = Vector2(randf_range(-0.3, 0.3), randf_range(-0.3, 0.3))
+			velocity = (dir_to_player + wobble) * e.speed
 
-		# SEPARAÇÃO 
-		var separation = Vector2.ZERO
-		var cell = Vector2(int(e.position.x / grid_size), int(e.position.y / grid_size))
-		
-		for dx in range(-1, 2):
-			for dy in range(-1, 2):
-				var neighbor_cell = cell + Vector2(dx, dy)
-				var cell_list = grid.get(neighbor_cell)
-				
-				if cell_list != null:
-					var checks = 0
-					for other in cell_list: 
-						if e == other: continue 
-						if other.health <= 0: continue 
-						
-						var diff = e.position - other.position
-						var dist_sq = diff.length_squared()
-						
-						if dist_sq > 0.1 and dist_sq < 400.0:
-							var push_strength = (400.0 - dist_sq) / 40.0
-							separation += diff * push_strength
-							
-							checks += 1
-							if checks >= 4:
-								break 
-
-		velocity += separation
 		e.position += velocity * delta
 
-		# ATAQUE
-		if e.position.distance_squared_to(player_pos) < attack_rad_sq:
+		if dist_sq < attack_rad_sq:
 			if player.has_method("take_damage"):
 				player.take_damage(attack_damage * delta)
 
-		# --- NOVO: ATUALIZAÇÃO VISUAL SEPARADA POR TIPO ---
-		var flip_x = -1.0 if velocity.x < 0 else 1.0
-		var trans = Transform2D(Vector2(flip_x, 0), Vector2(0, -1.0), e.position)
+		var scale_factor = elite_scale if e.is_elite else 1.0
+
+		var flip_x = -scale_factor if diff_to_player.x < 0 else scale_factor
+		trans.x = Vector2(flip_x, 0)
+		trans.y = Vector2(0, -scale_factor)
+		trans.origin = e.position
 		
 		if e.is_tank:
 			if multimesh_instance_tanks and multimesh_instance_tanks.multimesh:
 				multimesh_instance_tanks.multimesh.set_instance_transform_2d(tank_count, trans)
 			tank_count += 1
+		elif e.is_elite: # NOVO: Separa os Elites para o MultiMesh certo
+			if multimesh_instance_elites and multimesh_instance_elites.multimesh:
+				multimesh_instance_elites.multimesh.set_instance_transform_2d(elite_count, trans)
+			elite_count += 1
 		else:
 			if multimesh_instance and multimesh_instance.multimesh:
 				multimesh_instance.multimesh.set_instance_transform_2d(normal_count, trans)
@@ -214,9 +236,10 @@ func _process(delta):
 		
 		i -= 1
 
-	# Esconde os inimigos que não existem nas duas listas
 	if multimesh_instance and multimesh_instance.multimesh:
 		multimesh_instance.multimesh.visible_instance_count = normal_count
+	if multimesh_instance_elites and multimesh_instance_elites.multimesh:
+		multimesh_instance_elites.multimesh.visible_instance_count = elite_count
 	if multimesh_instance_tanks and multimesh_instance_tanks.multimesh:
 		multimesh_instance_tanks.multimesh.visible_instance_count = tank_count
 	
@@ -224,9 +247,7 @@ func _process(delta):
 	
 	if total_enemies > 0 and sound_step:
 		var chaos_factor = min(total_enemies / 150.0, 1.0)
-		
 		var play_interval = lerp(0.6, 0.3, chaos_factor)
-		
 		var volume_db = lerp(-25.0, -8.0, chaos_factor)
 		
 		horde_audio_player.volume_db = volume_db
@@ -236,12 +257,11 @@ func _process(delta):
 			horde_audio_player.stream = sound_step
 			horde_audio_player.pitch_scale = randf_range(0.7, 1.4) 
 			horde_audio_player.play()
-			
 			sound_timer = randf_range(-0.05, 0.05)
 
 	debug_print_timer += delta
 	if debug_print_timer >= 1.0:
-		print("Horda: ", normal_count, " | Tanks: ", tank_count, " | FPS: ", Engine.get_frames_per_second())
+		print("Horda: ", normal_count, " | Elites: ", elite_count, " | Tanks: ", tank_count, " | FPS: ", Engine.get_frames_per_second())
 		debug_print_timer = 0.0
 
 # ========================
@@ -271,5 +291,7 @@ func clear_all_enemies():
 	enemies.clear()
 	if multimesh_instance and multimesh_instance.multimesh:
 		multimesh_instance.multimesh.visible_instance_count = 0
+	if multimesh_instance_elites and multimesh_instance_elites.multimesh:
+		multimesh_instance_elites.multimesh.visible_instance_count = 0
 	if multimesh_instance_tanks and multimesh_instance_tanks.multimesh:
 		multimesh_instance_tanks.multimesh.visible_instance_count = 0

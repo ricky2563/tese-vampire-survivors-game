@@ -32,6 +32,11 @@ func _on_check_button_toggled(toggled_on):
 	# Altera a variável global do teu DDA!
 	DDAManager.is_dda_active = toggled_on
 	print("DDA Ativo: ", DDAManager.is_dda_active)
+	
+func _on_check_button_meteor_toggled(toggled_on):
+	# Altera a variável global do teu DDA!
+	DDAManager.is_dda_meteor_active = toggled_on
+	print("DDA Ativo (Meteor): ", DDAManager.is_dda_meteor_active)
 
 # ==========================================
 # 2. SLIDERS DE VOLUME (Testes Manuais)

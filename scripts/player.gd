@@ -21,6 +21,8 @@ extends CharacterBody2D
 var health = 100.0
 var armor = 0.0
 var health_regen = 0.0
+var extra_damage = 0
+var crit_chance = 0.0
 
 var upgrades_owned = []
 var pickup_range_level = 0
@@ -28,6 +30,8 @@ var max_health_level = 0
 var armor_level = 0
 var regen_level = 0
 var move_speed_level = 0
+var bonus_damage_level = 0
+var luck_level = 0
 
 var is_facing_right = true 
 var is_dead = false
@@ -161,7 +165,7 @@ func take_damage(amount):
 	if is_dead:
 		return
 		
-	var damage_reduction = armor * 0.10 # Corta 10% por nível
+	var damage_reduction = armor * 0.025 # Corta 10% por nível
 	var actual_damage = amount * (1.0 - damage_reduction)
 	actual_damage = max(0.0, actual_damage)
 	
@@ -175,6 +179,29 @@ func die():
 	# 1. Marca como morto para que os outros inimigos parem de dar dano neste frame
 	is_dead = true 
 	print("Morreu!")
+	
+	print("\n======================================")
+	print("💀 O JOGADOR MORREU! RELATÓRIO DO BOSS:")
+	
+	# Procura todos os bosses que estão vivos na arena
+	var bosses = get_tree().get_nodes_in_group("boss")
+	
+	if bosses.size() > 0:
+		for boss in bosses:
+			# Verifica se o boss tem as variáveis de vida para evitar erros
+			if "current_health" in boss and "max_health" in boss:
+				var hp = boss.current_health
+				var max_hp = boss.max_health
+				var percentagem = (float(hp) / float(max_hp)) * 100.0
+				
+				print("-> FIRE BOSS: ", hp, " / ", max_hp, " HP (", "%0.1f" % percentagem, "% restantes)")
+				
+				if percentagem <= 50.0:
+					print("-> Nota: Já tinhas chegado à Fase 2!")
+	else:
+		print("-> O Boss ainda não tinha feito spawn ou já estava morto.")
+		
+	print("======================================\n")
 	get_tree().call_deferred("reload_current_scene")
 	
 func gain_experience(amount):
@@ -192,9 +219,7 @@ func level_up():
 	experience_bar.max_value = experience_required
 	experience_bar.value = experience
 	level_label.text = "Lvl. " + str(level)
-	
-	print("LEVEL UP! Nível Atual: ", level)
-	
+		
 	show_upgrade_menu()
 	
 func show_upgrade_menu():

@@ -56,6 +56,8 @@ func _process(delta):
 	var seconds = int(game_time) % 60
 	$CanvasLayer/GameTime.text = str(minutes) + ":" + str(seconds).pad_zeros(2)
 	
+	if game_time >= 60.0:
+		EnemyManager.difficulty_multiplier = 1.0 + ((game_time - 60.0) / 10.0) * 0.15
 	# EVENTO: A Gaiola de Caos (Aos 1 minuto)
 	if game_time >= 60.0 and not cage_spawned:
 		spawn_barrier_right()
@@ -83,7 +85,7 @@ func _on_enemy_spawner_timeout():
 	elif game_time < 55:
 		mid_game()
 	else:
-		late_game()
+		boss_chaos_phase()
 		
 # ========================
 # GAME STATES MUDADOS PARA CAOS
@@ -113,6 +115,37 @@ func late_game():
 	# 3. Pequeno evento de Horda frequente para obfuscar a visão
 	if randi() % 3 == 0:
 		spawn_horde()
+		
+func boss_chaos_phase():
+	# CAOS ABSOLUTO: O PC aguenta, vamos testar o limite visual!
+	
+	# 1. Reposição Extrema (Nasce lixo mais rápido do que o arco mata)
+	for i in range(45): # Subiu de 28 para 80 esqueletos por tick!
+		spawn_enemy_around_player(650, false)
+		
+	for i in range(6): # Subiu de 6 para 15 Tanks
+		spawn_enemy_around_player(700, true) 
+		
+	# 2. Roleta Russa de Eventos (Eventos Múltiplos)
+	var evento_chance = randi() % 100
+	
+	if evento_chance < 35:
+		# 35% chance: Horda Dupla (Enche o ecrã de forma circular)
+		spawn_horde()
+		spawn_horde()
+		
+	elif evento_chance < 65:
+		# 30% chance: Duas Linhas (Cortam o mapa)
+		spawn_line_horde()
+		spawn_line_horde()
+		
+	elif evento_chance < 85:
+		# 20% chance: Parede Simples (Para obrigar o jogador a desviar-se)
+		var wall_dir = randi() % 4
+		if wall_dir == 0: spawn_barrier_right()
+		elif wall_dir == 1: spawn_barrier_left()
+		elif wall_dir == 2: spawn_barrier_top()
+		else: spawn_barrier_bottom()
 
 # ========================
 # SCENARIO 1 — CONTÍNUO
@@ -175,25 +208,16 @@ func spawn_line_horde():
 	var base_direction = Vector2.RIGHT.rotated(randf_range(0, TAU))
 	var base_position = player.global_position + (base_direction * 500)
 	
-	var group_size = 10      # número de inimigos no grupo
-	var vertical_spacing = 30
-	var horizontal_spread = 20
-	
-	var boss_index = randi() % group_size  # sorteia quem será o boss
+	var group_size = 15      # Aumentámos o tamanho da linha
+	var vertical_spacing = 40
+	var horizontal_spread = 15
 	
 	for i in range(group_size):
-		# offset vertical + horizontal aleatório
 		var offset = Vector2(randf_range(-horizontal_spread, horizontal_spread),
 							 i * vertical_spacing - (group_size*vertical_spacing/2))
 		
-		if i == boss_index:
-			# Spawn do boss no meio do grupo
-			var boss = boss_scene.instantiate()
-			boss.global_position = base_position + offset
-			add_child(boss)
-		else:
-			# Spawn de inimigo normal
-			spawn_enemy_at(base_position + offset)
+		# Spawna apenas inimigos! (Meti "true" para serem Tanks e formarem uma linha dura de quebrar)
+		spawn_enemy_at(base_position + offset, true)
 
 # ========================
 # SCENARIO 5 — BARREIRA
@@ -204,7 +228,7 @@ func spawn_barrier_right():
 		return
 		
 	var distance_to_right = 800 # Distância do player à barreira (ajusta para nascerem fora do ecrã)
-	var columns = 3             # A tua "densidade" (espessura da parede, 4 colunas)
+	var columns = 2             # A tua "densidade" (espessura da parede, 4 colunas)
 	var rows = 25               # Altura da parede (quantidade de inimigos de cima a baixo)
 	var spacing = 40            # Espaço em píxeis entre cada inimigo
 	
@@ -233,7 +257,7 @@ func spawn_barrier_left():
 		return
 		
 	var distance_to_left = 800 
-	var columns = 3            
+	var columns = 2            
 	var rows = 25              
 	var spacing = 40           
 	
@@ -259,7 +283,7 @@ func spawn_barrier_top():
 		
 	var distance_to_top = 500 
 	var columns = 25  # Agora a largura é grande (25 inimigos de lado a lado)
-	var rows = 3      # E a espessura é 3
+	var rows = 2      # E a espessura é 3
 	var spacing = 40
 	
 	var center_pos = player.global_position + Vector2(0, -distance_to_top)
@@ -278,7 +302,7 @@ func spawn_barrier_bottom():
 		
 	var distance_to_bottom = 500 
 	var columns = 25  
-	var rows = 3      
+	var rows = 2      
 	var spacing = 40
 	
 	var center_pos = player.global_position + Vector2(0, distance_to_bottom)
