@@ -6,9 +6,11 @@ extends Node2D
 @export var enemy_sprite: Texture2D
 @export var elite_sprite: Texture2D # NOVO: O sprite do inimigo elite!
 @export var gem_scene: PackedScene
-@export var max_enemies = 1200 # Aumentado para suportar o End Game
+@export var max_enemies = 1200
+@export var max_tanks_allowed = 250
 @export var attack_radius = 30.0
 @export var attack_damage = 5
+@export var max_attack_damage = 15.0
 @export var enemy_size = Vector2(32, 32)
 @export var elite_scale = 2
 
@@ -41,6 +43,7 @@ var multimesh_instance_elites: MultiMeshInstance2D # NOVO
 var multimesh_instance_tanks: MultiMeshInstance2D
 var debug_print_timer = 0.0
 var pending_xp = 0
+var current_tank_count = 0
 
 func _ready():
 	add_to_group("enemy_manager")
@@ -107,6 +110,9 @@ func _ready():
 func spawn_enemy(pos: Vector2, is_boss=false, is_tank=false):
 	if enemies.size() >= max_enemies:
 		return
+	
+	if is_tank and current_tank_count >= max_tanks_allowed:
+		is_tank = false
 
 	var is_elite = false
 	if not is_tank and not is_boss:
@@ -212,7 +218,15 @@ func _process(delta):
 
 		if dist_sq < attack_rad_sq:
 			if player.has_method("take_damage"):
-				player.take_damage(attack_damage * delta)
+				var scaled_damage = attack_damage * difficulty_multiplier
+				scaled_damage = min(scaled_damage, max_attack_damage)
+				
+				var enemy_type = "Horda (Normal)"
+				if e.is_elite: 
+					enemy_type = "Horda (Elite)"
+				elif e.is_tank: 
+					enemy_type = "Horda (Tank)"
+				player.take_damage(scaled_damage * delta, enemy_type)
 
 		var scale_factor = elite_scale if e.is_elite else 1.0
 
@@ -242,6 +256,8 @@ func _process(delta):
 		multimesh_instance_elites.multimesh.visible_instance_count = elite_count
 	if multimesh_instance_tanks and multimesh_instance_tanks.multimesh:
 		multimesh_instance_tanks.multimesh.visible_instance_count = tank_count
+		
+	current_tank_count = tank_count
 	
 	var total_enemies = enemies.size()
 	

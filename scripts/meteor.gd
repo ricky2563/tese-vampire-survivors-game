@@ -1,7 +1,7 @@
 extends Node2D
 
 @export var fall_time = 0.5
-@export var damage = 25
+@export var damage = 15
 @export var shadow_scene: PackedScene
 
 var shadow
@@ -47,7 +47,7 @@ func impact():
 			if shield_node and shield_node.has_method("block_attack"):
 				shield_node.block_attack()
 		else:
-			player_target.take_damage(damage)
+			player_target.take_damage(damage, "Boss: Meteor Attack")
 			
 	if shadow:
 		shadow.queue_free()

@@ -65,6 +65,6 @@ func _on_animated_sprite_2d_animation_finished():
 	if anim.animation == "rise":
 		for body in get_overlapping_bodies():
 			if body.is_in_group("player"):
-				body.take_damage(damage)
+				body.take_damage(damage, "Boss: Hand Attack")
 		
 		queue_free()

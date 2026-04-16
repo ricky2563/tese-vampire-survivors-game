@@ -1,7 +1,7 @@
 extends CharacterBody2D
 
 @export var speed = 40
-@export var max_health = 90000
+@export var max_health = 150000
 @export var player: Node2D
 @export var fire_hand_scene: PackedScene
 @export var meteor_scene: PackedScene
@@ -277,7 +277,7 @@ func stop_curse_attack():
 	if has_node("Sprite2D"): $Sprite2D.visible = true
 		
 	if player_moved:
-		if player.has_method("take_damage"): player.take_damage(30)
+		if player.has_method("take_damage"): player.take_damage(30, "Boss: Stop Attack")
 		if speech_bubble and speech_label:
 			var taunts = ["I SAID STOP!", "BE STILL!", "MOVEMENT DETECTED!", "YOU DARE MOVE?", "RUNNING KILLS YOU FASTER!"]
 			speech_label.text = taunts.pick_random()
@@ -320,6 +320,9 @@ func enter_phase_2():
 	
 	self.process_mode = Node.PROCESS_MODE_ALWAYS
 	get_tree().paused = true
+	
+	if is_instance_valid(player) and player.has_method("record_event"):
+		player.record_event("BOSS: INÍCIO FASE 2")
 	
 	if has_node("CollisionShape2D"): $CollisionShape2D.set_deferred("disabled", true)
 	

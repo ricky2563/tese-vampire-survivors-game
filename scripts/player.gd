@@ -40,6 +40,11 @@ var umbrella_cooldown = 5.0
 var is_shield_active = false
 var flicker_tween: Tween
 
+# --- TELEMETRIA ---
+var health_log = []
+var play_time = 0.0
+var log_timer = 0.0
+
 var weapons = {
 	"bow": {
 		"level": 0
@@ -127,12 +132,18 @@ func _ready():
 	anim.play("idle_right")
 
 func _physics_process(delta):
-	# --- ALTERAÇÃO AQUI: Lógica da Regeneração de Vida ---
 	if health < max_health and health_regen > 0:
 		health += health_regen * delta
 		health = min(health, max_health)
 		health_bar.value = health
-
+	
+	if not is_dead:
+		play_time += delta
+		log_timer += delta
+		if log_timer >= 1.0:
+			health_log.append({"time": play_time, "hp": health, "event": "Normal"})
+			log_timer = 0.0
+		
 	var direction = Input.get_vector("move_left", "move_right", "move_up", "move_down")
 	
 	if direction:
@@ -160,8 +171,7 @@ func _physics_process(delta):
 			
 	move_and_slide()
 
-func take_damage(amount):
-	# Se o jogador já estiver morto, sai da função imediatamente e ignora o ataque!
+func take_damage(amount, source = "Desconhecido"):
 	if is_dead:
 		return
 		
@@ -171,6 +181,16 @@ func take_damage(amount):
 	
 	health -= actual_damage
 	health_bar.value = health 
+	
+	# ==========================================
+	# TELEMETRIA: Registar a pancada no Excel
+	# ==========================================
+	if actual_damage > 0.5: # Evita spam de micro-danos contínuos
+		health_log.append({
+			"time": play_time, 
+			"hp": health, 
+			"event": "Dano: " + source + " (-" + str(snapped(actual_damage, 0.1)) + ")"
+		})
 	
 	if health <= 0:
 		die()
@@ -182,6 +202,14 @@ func die():
 	
 	print("\n======================================")
 	print("💀 O JOGADOR MORREU! RELATÓRIO DO BOSS:")
+	
+	var main_scene = get_tree().current_scene
+	if "game_time" in main_scene:
+		var t = main_scene.game_time
+		var minutes = int(t) / 60
+		var seconds = int(t) % 60
+		print("-> TEMPO DE SOBREVIVÊNCIA: ", minutes, "m ", str(seconds).pad_zeros(2), "s")
+		print("--------------------------------------")
 	
 	# Procura todos os bosses que estão vivos na arena
 	var bosses = get_tree().get_nodes_in_group("boss")
@@ -202,7 +230,34 @@ func die():
 		print("-> O Boss ainda não tinha feito spawn ou já estava morto.")
 		
 	print("======================================\n")
+	export_telemetry_to_csv()
 	get_tree().call_deferred("reload_current_scene")
+	
+func export_telemetry_to_csv():
+	var file = FileAccess.open("user://grafico_vida_player.csv", FileAccess.WRITE)
+	if file:
+		# Cria o cabeçalho das colunas do Excel
+		file.store_line("Tempo(s),Vida,Evento")
+		
+		# Escreve o histórico todo
+		for entry in health_log:
+			var linha = str(snapped(entry.time, 0.1)) + "," + str(snapped(entry.hp, 0.1)) + "," + entry.event
+			file.store_line(linha)
+			
+		file.close()
+		
+		var caminho = ProjectSettings.globalize_path("user://grafico_vida_player.csv")
+		print("📊 DADOS DO GRÁFICO GRAVADOS COM SUCESSO EM:")
+		print(caminho)
+		print("======================================\n")
+		
+func record_event(event_name):
+	health_log.append({
+		"time": play_time, 
+		"hp": health, 
+		"event": event_name
+	})
+	print("TELEMETRIA: Evento registado: ", event_name)
 	
 func gain_experience(amount):
 	experience += amount

@@ -14,3 +14,12 @@ export_credentials.cfg
 .mono/
 data_*/
 mono_crash.*.json
+
+
+tese_telemetria/telemetry_csv/*
+tese_telemetria/telemetry_html/*
+tese_telemetria/telemetry_png/*
+
+tese_telemetria/*.csv
+tese_telemetria/*.html
+tese_telemetria/*.png

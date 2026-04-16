@@ -67,7 +67,7 @@ layout_mode = 0
 offset_left = 152.0
 offset_top = 1.0
 offset_right = 292.0
-offset_bottom = 210.0
+offset_bottom = 99.0
 
 [node name="Label" type="Label" parent="Panel/VBoxContainer2"]
 layout_mode = 2
@@ -87,10 +87,17 @@ layout_mode = 2
 min_value = -40.0
 max_value = 0.0
 
-[node name="ATIVAR DDA (Foco)" type="CheckButton" parent="Panel/VBoxContainer2"]
+[node name="VBoxContainer3" type="VBoxContainer" parent="Panel"]
+layout_mode = 0
+offset_left = 155.0
+offset_top = 97.0
+offset_right = 199.0
+offset_bottom = 149.0
+
+[node name="ATIVAR DDA (Foco)" type="CheckButton" parent="Panel/VBoxContainer3"]
 layout_mode = 2
 
-[node name="ATIVAR DDA (Meteor)" type="CheckButton" parent="Panel/VBoxContainer2"]
+[node name="ATIVAR DDA (Meteor)" type="CheckButton" parent="Panel/VBoxContainer3"]
 layout_mode = 2
 
 [connection signal="value_changed" from="Panel/VBoxContainer/HSlider" to="." method="_on_slider_boss_value_changed"]
@@ -99,5 +106,5 @@ layout_mode = 2
 [connection signal="value_changed" from="Panel/VBoxContainer/HSlider2" to="." method="_on_slider_stop_value_changed"]
 [connection signal="value_changed" from="Panel/VBoxContainer2/HSlider" to="." method="_on_slider_music_value_changed"]
 [connection signal="value_changed" from="Panel/VBoxContainer2/HSlider2" to="." method="_on_slider_horda_value_changed"]
-[connection signal="toggled" from="Panel/VBoxContainer2/ATIVAR DDA (Foco)" to="." method="_on_check_button_toggled"]
-[connection signal="toggled" from="Panel/VBoxContainer2/ATIVAR DDA (Meteor)" to="." method="_on_check_button_meteor_toggled"]
+[connection signal="toggled" from="Panel/VBoxContainer3/ATIVAR DDA (Foco)" to="." method="_on_check_button_toggled"]
+[connection signal="toggled" from="Panel/VBoxContainer3/ATIVAR DDA (Meteor)" to="." method="_on_check_button_meteor_toggled"]
