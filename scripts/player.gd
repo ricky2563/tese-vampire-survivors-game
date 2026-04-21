@@ -175,6 +175,13 @@ func take_damage(amount, source = "Desconhecido"):
 	if is_dead:
 		return
 		
+	# ==========================================
+	# DDA: AVISAR O CÉREBRO QUE LEVÁMOS DANO
+	# ==========================================
+	if DDAManager.has_method("register_damage"):
+		DDAManager.register_damage(source)
+	# ==========================================
+		
 	var damage_reduction = armor * 0.025 # Corta 10% por nível
 	var actual_damage = amount * (1.0 - damage_reduction)
 	actual_damage = max(0.0, actual_damage)
@@ -231,6 +238,8 @@ func die():
 		
 	print("======================================\n")
 	export_telemetry_to_csv()
+	if DDAManager.has_method("export_dda_telemetry"):
+		DDAManager.export_dda_telemetry()
 	get_tree().call_deferred("reload_current_scene")
 	
 func export_telemetry_to_csv():

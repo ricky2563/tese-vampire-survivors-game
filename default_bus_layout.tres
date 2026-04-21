@@ -1,10 +1,52 @@
-[gd_resource type="AudioBusLayout" load_steps=3 format=3 uid="uid://dx3dtie6udpyn"]
+[gd_resource type="AudioBusLayout" load_steps=11 format=3 uid="uid://dx3dtie6udpyn"]
 
 [sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_g28q7"]
 resource_name = "LowPassFilter"
+cutoff_hz = 1000.0
 
 [sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_j3pel"]
 resource_name = "LowPassFilter"
+cutoff_hz = 1000.0
+
+[sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_n8wo2"]
+resource_name = "LowPassFilter"
+cutoff_hz = 800.0
+resonance = 0.6
+
+[sub_resource type="AudioEffectHighShelfFilter" id="AudioEffectHighShelfFilter_j3pel"]
+resource_name = "HighShelfFilter"
+cutoff_hz = 2500.0
+gain = 3.0
+
+[sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_5t1r3"]
+resource_name = "LowPassFilter"
+cutoff_hz = 800.0
+resonance = 0.6
+
+[sub_resource type="AudioEffectHighShelfFilter" id="AudioEffectHighShelfFilter_g28q7"]
+resource_name = "HighShelfFilter"
+cutoff_hz = 2500.0
+gain = 3.0
+
+[sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_cenje"]
+resource_name = "LowPassFilter"
+cutoff_hz = 800.0
+resonance = 0.6
+
+[sub_resource type="AudioEffectHighShelfFilter" id="AudioEffectHighShelfFilter_n8wo2"]
+resource_name = "HighShelfFilter"
+cutoff_hz = 2500.0
+gain = 3.0
+
+[sub_resource type="AudioEffectLowPassFilter" id="AudioEffectLowPassFilter_dqt2m"]
+resource_name = "LowPassFilter"
+cutoff_hz = 300.0
+resonance = 0.6
+
+[sub_resource type="AudioEffectHighShelfFilter" id="AudioEffectHighShelfFilter_5t1r3"]
+resource_name = "HighShelfFilter"
+cutoff_hz = 2500.0
+gain = 3.0
 
 [resource]
 bus/1/name = &"Music"
@@ -14,7 +56,7 @@ bus/1/bypass_fx = false
 bus/1/volume_db = 0.0
 bus/1/send = &"Master"
 bus/1/effect/0/effect = SubResource("AudioEffectLowPassFilter_g28q7")
-bus/1/effect/0/enabled = true
+bus/1/effect/0/enabled = false
 bus/2/name = &"Horde"
 bus/2/solo = false
 bus/2/mute = false
@@ -22,12 +64,12 @@ bus/2/bypass_fx = false
 bus/2/volume_db = 0.0
 bus/2/send = &"Master"
 bus/2/effect/0/effect = SubResource("AudioEffectLowPassFilter_j3pel")
-bus/2/effect/0/enabled = true
+bus/2/effect/0/enabled = false
 bus/3/name = &"Threats"
 bus/3/solo = false
 bus/3/mute = false
 bus/3/bypass_fx = false
-bus/3/volume_db = 0.0
+bus/3/volume_db = -0.0038433075
 bus/3/send = &"Master"
 bus/4/name = &"Attack_Meteor"
 bus/4/solo = false
@@ -35,21 +77,37 @@ bus/4/mute = false
 bus/4/bypass_fx = false
 bus/4/volume_db = 0.06726074
 bus/4/send = &"Threats"
+bus/4/effect/0/effect = SubResource("AudioEffectLowPassFilter_n8wo2")
+bus/4/effect/0/enabled = false
+bus/4/effect/1/effect = SubResource("AudioEffectHighShelfFilter_j3pel")
+bus/4/effect/1/enabled = false
 bus/5/name = &"Attack_Hand"
 bus/5/solo = false
 bus/5/mute = false
 bus/5/bypass_fx = false
 bus/5/volume_db = 0.0
 bus/5/send = &"Threats"
+bus/5/effect/0/effect = SubResource("AudioEffectLowPassFilter_5t1r3")
+bus/5/effect/0/enabled = false
+bus/5/effect/1/effect = SubResource("AudioEffectHighShelfFilter_g28q7")
+bus/5/effect/1/enabled = false
 bus/6/name = &"Attack_Ring"
 bus/6/solo = false
 bus/6/mute = false
 bus/6/bypass_fx = false
 bus/6/volume_db = 0.0
 bus/6/send = &"Threats"
+bus/6/effect/0/effect = SubResource("AudioEffectLowPassFilter_cenje")
+bus/6/effect/0/enabled = false
+bus/6/effect/1/effect = SubResource("AudioEffectHighShelfFilter_n8wo2")
+bus/6/effect/1/enabled = false
 bus/7/name = &"Attack_Stop"
 bus/7/solo = false
 bus/7/mute = false
 bus/7/bypass_fx = false
 bus/7/volume_db = 0.0
 bus/7/send = &"Threats"
+bus/7/effect/0/effect = SubResource("AudioEffectLowPassFilter_dqt2m")
+bus/7/effect/0/enabled = true
+bus/7/effect/1/effect = SubResource("AudioEffectHighShelfFilter_5t1r3")
+bus/7/effect/1/enabled = false

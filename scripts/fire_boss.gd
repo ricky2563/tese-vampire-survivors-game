@@ -99,12 +99,16 @@ func refill_deck_phase_2():
 	print("BOSS: Baralho da Fase 2 gerado (Sem Stop)!")
 
 # ==========================================
-# ATAQUES (Mantidos exatos como os teus)
+# ATAQUES 
 # ==========================================
 func fire_hand_attack():
 	if not player: return
 	if fire_hand_scene == null: return
 	is_attacking = true
+	
+	# --- NOVO: AVISA O DDA DO INÍCIO ---
+	if DDAManager.has_method("start_attack"):
+		DDAManager.start_attack("Boss: Hand Attack")
 	
 	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus(0.5)
 	
@@ -120,14 +124,21 @@ func fire_hand_attack():
 	
 	await get_tree().create_timer(0.5, false).timeout
 	is_attacking = false
+	
+	# --- NOVO: AVISA O DDA DO FIM ---
+	if DDAManager.has_method("end_attack"):
+		DDAManager.end_attack()
 
 func meteor_rain_attack():
 	if not player: return
 	is_attacking = true 
 	var meteor_count = 12 
 	
+	# --- NOVO: AVISA O DDA DO INÍCIO ---
+	if DDAManager.has_method("start_attack"):
+		DDAManager.start_attack("Boss: Meteor Attack")
+	
 	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus(1.5)
-	if DDAManager.is_dda_meteor_active: DDAManager.trigger_threat_meteor_focus(1.5)
 	
 	audio_player.bus = "Attack_Meteor" 
 	for i in range(3):
@@ -159,6 +170,10 @@ func meteor_rain_attack():
 		
 	await get_tree().create_timer(1.2, false).timeout
 	is_attacking = false
+	
+	# --- NOVO: AVISA O DDA DO FIM ---
+	if DDAManager.has_method("end_attack"):
+		DDAManager.end_attack()
 
 func spawn_meteor(pos):
 	var meteor = meteor_scene.instantiate()
@@ -168,6 +183,10 @@ func spawn_meteor(pos):
 func fire_ring_attack():
 	if not player: return
 	is_attacking = true
+
+	# --- NOVO: AVISA O DDA DO INÍCIO ---
+	if DDAManager.has_method("start_attack"):
+		DDAManager.start_attack("Boss: Ring Attack")
 
 	var original_speed = speed
 	speed = 0 
@@ -183,9 +202,6 @@ func fire_ring_attack():
 	
 	var timer = 0.0
 	while timer < duration:
-		# ==========================================
-		# O SEGREDO ANTI-CRASH: Se o boss foi apagado, aborta tudo!
-		# ==========================================
 		if not is_inside_tree():
 			return
 			
@@ -199,7 +215,6 @@ func fire_ring_attack():
 			audio_player.stop()
 			break
 
-	# Confirmação dupla antes de instanciar o anel
 	if not is_inside_tree(): return
 
 	if fire_ring_scene:
@@ -214,10 +229,14 @@ func fire_ring_attack():
 	print("Anel de Fogo disparado após ", duration, "s de carga!")
 	
 	await get_tree().create_timer(1.0).timeout
-	if not is_inside_tree(): return # Outra segurança final
+	if not is_inside_tree(): return
 	
 	speed = original_speed
 	is_attacking = false
+	
+	# --- NOVO: AVISA O DDA DO FIM ---
+	if DDAManager.has_method("end_attack"):
+		DDAManager.end_attack()
 	
 func stop_curse_attack():
 	if phase_2_active:
@@ -228,6 +247,10 @@ func stop_curse_attack():
 	is_attacking = true
 	var original_speed = speed
 	speed = 0
+	
+	# --- NOVO: AVISA O DDA DO INÍCIO ---
+	if DDAManager.has_method("start_attack"):
+		DDAManager.start_attack("Boss: Stop Attack")
 	
 	var telegraph_time = 1.2
 	var check_time = 0.3
@@ -247,7 +270,6 @@ func stop_curse_attack():
 	
 	await get_tree().create_timer(telegraph_time, false).timeout
 	
-	# Verifica se o Boss ainda existe e se a cutscene não ativou
 	if not is_inside_tree(): return
 	if phase_2_active and not is_clone:
 		is_attacking = false
@@ -262,14 +284,14 @@ func stop_curse_attack():
 	var timer = 0.0
 	
 	while timer < check_time:
-		if not is_inside_tree(): return # Anti-crash
+		if not is_inside_tree(): return 
 		
 		if "velocity" in player and player.velocity.length() > 5.0:
 			player_moved = true
 		timer += get_process_delta_time()
 		await get_tree().process_frame
 		
-	if not is_inside_tree(): return # Anti-crash
+	if not is_inside_tree(): return 
 		
 	if stop_anim:
 		stop_anim.visible = false
@@ -277,7 +299,8 @@ func stop_curse_attack():
 	if has_node("Sprite2D"): $Sprite2D.visible = true
 		
 	if player_moved:
-		if player.has_method("take_damage"): player.take_damage(30, "Boss: Stop Attack")
+		# ATENÇÃO AQUI: Alterei a source de "Boss: Stop Attack" para bater certo com o dicionário
+		if player.has_method("take_damage"): player.take_damage(30, "Boss: Stop Curse")
 		if speech_bubble and speech_label:
 			var taunts = ["I SAID STOP!", "BE STILL!", "MOVEMENT DETECTED!", "YOU DARE MOVE?", "RUNNING KILLS YOU FASTER!"]
 			speech_label.text = taunts.pick_random()
@@ -285,10 +308,14 @@ func stop_curse_attack():
 			get_tree().create_timer(2.0, false).timeout.connect(func(): speech_bubble.visible = false)
 		
 	await get_tree().create_timer(0.5, false).timeout
-	if not is_inside_tree(): return # Anti-crash
+	if not is_inside_tree(): return 
 	
 	speed = original_speed
 	is_attacking = false
+	
+	# --- NOVO: AVISA O DDA DO FIM ---
+	if DDAManager.has_method("end_attack"):
+		DDAManager.end_attack()
 	
 # ==========================================
 # SISTEMA DE DANO E FASE 2
