@@ -14,11 +14,14 @@ var bus_attack_stop: int
 const FILTER_LOWPASS = 0   # Desafio (Abafa)
 const FILTER_HIGHSHELF = 1 # Ajuda (Realça)
 
+# ==========================================
+# O DICIONÁRIO AGORA TEM AFINAÇÃO INDIVIDUAL ("challenge_volume")
+# ==========================================
 var attack_history = {
-	"Boss: Meteor Attack": {"hits": 0, "dodges": 0, "bus_name": "Attack_Meteor"},
-	"Boss: Ring Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Ring"},
-	"Boss: Stop Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Stop"},
-	"Boss: Hand Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Hand"}
+	"Boss: Meteor Attack": {"hits": 0, "dodges": 0, "bus_name": "Attack_Meteor", "challenge_volume": 2.0},
+	"Boss: Ring Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Ring",   "challenge_volume": -2.0},
+	"Boss: Stop Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Stop",   "challenge_volume": 0.0}, 
+	"Boss: Hand Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Hand",   "challenge_volume": 1.0}
 }
 
 var current_active_attack = ""
@@ -29,7 +32,7 @@ var is_ducking = false
 
 # Tweens
 var cluster_tween: Tween 
-var attack_vol_tween: Tween # NOVO: Para baixar o volume do ataque no Desafio
+var attack_vol_tween: Tween 
 
 # Telemetria
 var dda_log = []
@@ -99,7 +102,6 @@ func export_dda_telemetry():
 	if dda_log.is_empty(): return
 	var file = FileAccess.open("user://grafico_dda_audio.csv", FileAccess.WRITE)
 	if file:
-		# Repara nos cabeçalhos: O Boss agora exporta "Estado" e não "dB"
 		file.store_line("Tempo(s),Horda(dB),Musica(dB),Mao(Estado),Meteoro(Estado),Anel(Estado),Stop(Estado),Evento,Detalhes")
 		for entry in dda_log:
 			var linha = str(snapped(entry.time, 0.1)) + "," + \
@@ -132,11 +134,13 @@ func start_attack(attack_name: String):
 		# DESAFIO
 		AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, true)
 		
-		# --- GARANTIA QUE QUALQUER ATAQUE FICA MAIS DIFÍCIL ---
-		# Desce o volume do ataque -2.5dB gradualmente para não ser abrupto
+		# --- AFINAÇÃO INDIVIDUAL ---
+		# Vai buscar o valor exato que definimos para este ataque no dicionário!
+		var volume_amount = attack_history[attack_name]["challenge_volume"]
+		
 		if attack_vol_tween: attack_vol_tween.kill()
 		attack_vol_tween = create_tween()
-		attack_vol_tween.tween_method(func(v): AudioServer.set_bus_volume_db(my_bus, v), 0.0, -2.5, 0.5)
+		attack_vol_tween.tween_method(func(v): AudioServer.set_bus_volume_db(my_bus, v), 0.0, volume_amount, 0.5)
 		
 		if not is_ducking:
 			if cluster_tween: cluster_tween.kill()
@@ -161,7 +165,7 @@ func end_attack():
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, false)
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_HIGHSHELF, false)
 	
-	# Repõe o volume do ataque se ele tiver descido no Desafio
+	# Repõe o volume a zero
 	if attack_vol_tween: attack_vol_tween.kill()
 	attack_vol_tween = create_tween()
 	attack_vol_tween.tween_method(func(v): AudioServer.set_bus_volume_db(my_bus, v), AudioServer.get_bus_volume_db(my_bus), 0.0, 0.5)
@@ -185,7 +189,7 @@ func register_damage(source: String):
 		record_event("Dano Sofrido", source)
 
 # ==========================================
-# FOCUS GERAL (Agora único para todos os ataques)
+# FOCUS GERAL (Ducking para Ajuda)
 # ==========================================
 func trigger_threat_focus(duration: float):
 	if not is_dda_active or is_ducking: return 

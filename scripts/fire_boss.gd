@@ -122,7 +122,7 @@ func fire_hand_attack():
 	attack.global_position = player.global_position + offset
 	get_tree().root.add_child(attack)
 	
-	await get_tree().create_timer(0.5, false).timeout
+	await get_tree().create_timer(2.5, false).timeout
 	is_attacking = false
 	
 	# --- NOVO: AVISA O DDA DO FIM ---
@@ -300,7 +300,7 @@ func stop_curse_attack():
 		
 	if player_moved:
 		# ATENÇÃO AQUI: Alterei a source de "Boss: Stop Attack" para bater certo com o dicionário
-		if player.has_method("take_damage"): player.take_damage(30, "Boss: Stop Curse")
+		if player.has_method("take_damage"): player.take_damage(30, "Boss: Stop Attack")
 		if speech_bubble and speech_label:
 			var taunts = ["I SAID STOP!", "BE STILL!", "MOVEMENT DETECTED!", "YOU DARE MOVE?", "RUNNING KILLS YOU FASTER!"]
 			speech_label.text = taunts.pick_random()
