@@ -40,6 +40,8 @@ var umbrella_cooldown = 5.0
 var is_shield_active = false
 var flicker_tween: Tween
 
+var auto_heal_enabled = false
+
 # --- TELEMETRIA ---
 var health_log = []
 var play_time = 0.0
@@ -203,7 +205,7 @@ func take_damage(amount, source = "Desconhecido"):
 		die()
 
 func die():
-	# 1. Marca como morto para que os outros inimigos parem de dar dano neste frame
+	if is_dead: return
 	is_dead = true 
 	print("Morreu!")
 	
@@ -218,12 +220,10 @@ func die():
 		print("-> TEMPO DE SOBREVIVÊNCIA: ", minutes, "m ", str(seconds).pad_zeros(2), "s")
 		print("--------------------------------------")
 	
-	# Procura todos os bosses que estão vivos na arena
 	var bosses = get_tree().get_nodes_in_group("boss")
 	
 	if bosses.size() > 0:
 		for boss in bosses:
-			# Verifica se o boss tem as variáveis de vida para evitar erros
 			if "current_health" in boss and "max_health" in boss:
 				var hp = boss.current_health
 				var max_hp = boss.max_health
@@ -237,18 +237,15 @@ func die():
 		print("-> O Boss ainda não tinha feito spawn ou já estava morto.")
 		
 	print("======================================\n")
-	export_telemetry_to_csv()
-	if DDAManager.has_method("export_dda_telemetry"):
-		DDAManager.export_dda_telemetry()
-	get_tree().call_deferred("reload_current_scene")
+	
+	if main_scene and main_scene.has_method("trigger_game_over"):
+		main_scene.trigger_game_over(false, "DERROTA...\nMorreste em combate!")
 	
 func export_telemetry_to_csv():
 	var file = FileAccess.open("user://grafico_vida_player.csv", FileAccess.WRITE)
 	if file:
-		# Cria o cabeçalho das colunas do Excel
 		file.store_line("Tempo(s),Vida,Evento")
 		
-		# Escreve o histórico todo
 		for entry in health_log:
 			var linha = str(snapped(entry.time, 0.1)) + "," + str(snapped(entry.hp, 0.1)) + "," + entry.event
 			file.store_line(linha)
@@ -284,7 +281,13 @@ func level_up():
 	experience_bar.value = experience
 	level_label.text = "Lvl. " + str(level)
 		
-	show_upgrade_menu()
+	if auto_heal_enabled:
+		health += 5.0
+		health = min(health, max_health)
+		if is_instance_valid(health_bar):
+			health_bar.value = health
+	else:
+		show_upgrade_menu()
 	
 func show_upgrade_menu():
 	get_tree().paused = true

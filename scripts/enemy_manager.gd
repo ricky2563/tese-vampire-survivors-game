@@ -45,9 +45,15 @@ var debug_print_timer = 0.0
 var pending_xp = 0
 var current_tank_count = 0
 
+var gem_container: Node2D
+
 func _ready():
 	add_to_group("enemy_manager")
 	player = get_tree().get_first_node_in_group("player")
+	
+	gem_container = Node2D.new()
+	gem_container.name = "GemContainer"
+	add_child(gem_container)
 	
 	# --- MULTIMESH DOS INIMIGOS NORMAIS ---
 	multimesh_instance = $EnemiesMesh
@@ -151,7 +157,7 @@ func spawn_gem(pos: Vector2, xp_value: int):
 	if gem_scene == null: return
 	
 	pending_xp += xp_value
-	var current_gems = get_tree().get_node_count_in_group("gem")
+	var current_gems = gem_container.get_child_count()
 		
 	var drop_chance = 1.0 
 	if enemies.size() > 400:
@@ -171,7 +177,7 @@ func spawn_gem(pos: Vector2, xp_value: int):
 		elif pending_xp >= 50:
 			gem.scale = Vector2(1.5, 1.5)
 			
-		get_tree().root.call_deferred("add_child", gem)
+		gem_container.call_deferred("add_child", gem)
 		pending_xp = 0
 
 # ========================
@@ -305,9 +311,14 @@ func check_bullet_hit(bullet_pos: Vector2, hit_radius: float, damage: int) -> bo
 	
 func clear_all_enemies():
 	enemies.clear()
+	pending_xp = 0
+	difficulty_multiplier = 1.0
 	if multimesh_instance and multimesh_instance.multimesh:
 		multimesh_instance.multimesh.visible_instance_count = 0
 	if multimesh_instance_elites and multimesh_instance_elites.multimesh:
 		multimesh_instance_elites.multimesh.visible_instance_count = 0
 	if multimesh_instance_tanks and multimesh_instance_tanks.multimesh:
 		multimesh_instance_tanks.multimesh.visible_instance_count = 0
+	if is_instance_valid(gem_container):
+		for gem in gem_container.get_children():
+			gem.queue_free()

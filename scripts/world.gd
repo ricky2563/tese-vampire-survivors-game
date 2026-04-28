@@ -30,6 +30,7 @@ var game_time = 0.0
 var boss_fire_spawned = false
 var barrier_right_spawned = false
 var barrier_left_spawned = false
+var is_game_over = false
 
 
 func _ready():
@@ -50,6 +51,7 @@ func _ready():
 var cage_spawned = false
 
 func _process(delta):
+	if is_game_over: return
 	game_time += delta
 	
 	var minutes = int(game_time) / 60
@@ -72,6 +74,80 @@ func _process(delta):
 		spawn_boss_fire()
 		boss_fire_spawned = true
 		print("EVENTO: Fire Boss entrou na Gaiola!")
+	
+	if game_time >= 600.0:
+		check_time_limit_endgame()
+
+# ========================================================
+# END CYCLE
+# ========================================================
+func check_time_limit_endgame():
+	var bosses = get_tree().get_nodes_in_group("boss")
+	var boss_is_alive = false
+	
+	for b in bosses:
+		if is_instance_valid(b) and "current_health" in b and b.current_health > 0:
+			boss_is_alive = true
+			break
+			
+	if boss_is_alive:
+		trigger_game_over(false, "Time Out!\nBoss is still alive")
+	else:
+		trigger_game_over(true, "You win!\nSurvived 10min and defeated the boss")
+
+func trigger_game_over(is_win: bool, message: String):
+	if is_game_over: return
+	is_game_over = true
+	get_tree().paused = true # Pára o jogo
+	
+	# 1. Exporta tudo!
+	var player = get_player()
+	if player and player.has_method("export_telemetry_to_csv"):
+		player.export_telemetry_to_csv()
+	if DDAManager.has_method("export_dda_telemetry"):
+		DDAManager.export_dda_telemetry()
+		
+	# 2. Mostra o menu dinâmico
+	create_restart_menu(is_win, message)
+
+func create_restart_menu(is_win: bool, message: String):
+	var canvas = CanvasLayer.new()
+	canvas.process_mode = Node.PROCESS_MODE_ALWAYS 
+	canvas.layer = 100 
+	add_child(canvas)
+	
+	var bg = ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.85)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	canvas.add_child(bg)
+
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	canvas.add_child(center)
+	
+	var vbox = VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 30)
+	center.add_child(vbox)
+	
+	var label = Label.new()
+	label.text = message
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 32)
+	label.modulate = Color(0.2, 1.0, 0.2) if is_win else Color(1.0, 0.2, 0.2)
+	vbox.add_child(label)
+	
+	var btn = Button.new()
+	btn.text = "RESTART GAME"
+	btn.custom_minimum_size = Vector2(250, 60)
+	btn.pressed.connect(restart_game)
+	vbox.add_child(btn)
+
+func restart_game():
+	get_tree().paused = false 
+	EnemyManager.clear_all_enemies()
+
+	get_tree().reload_current_scene()
 
 # ========================
 # MAIN SPAWNER (Game states)
@@ -409,10 +485,8 @@ func update_label():
 	$CanvasLayer/Label.text = ["CONTINUOUS", "HORDE", "WAVES", "LINE"][spawn_mode]
 	
 func clear_enemies():
-	# 1. Limpa a horda do Manager
 	EnemyManager.clear_all_enemies()
 		
-	# 2. Opcional: também limpa bosses (já que eles continuam a ser nós normais)
 	var bosses = get_tree().get_nodes_in_group("boss")
 	for boss in bosses:
 		boss.queue_free()

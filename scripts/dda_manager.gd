@@ -60,7 +60,6 @@ func _process(delta):
 		if not cluster_tween or not cluster_tween.is_running():
 			AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
 		
-	# --- TELEMETRIA INTELIGENTE (Grava Volume da Mistura e ESTADO do Boss) ---
 	log_timer += delta
 	if log_timer >= 0.5:
 		dda_log.append({
@@ -76,7 +75,6 @@ func _process(delta):
 		})
 		log_timer = 0.0
 
-# HELPER DE TELEMETRIA: Lê se o ataque está em Desafio (-1), Normal (0) ou Ajuda (1)
 func get_dda_state(bus_idx: int) -> int:
 	if AudioServer.is_bus_effect_enabled(bus_idx, FILTER_LOWPASS): return -1
 	if AudioServer.is_bus_effect_enabled(bus_idx, FILTER_HIGHSHELF): return 1
@@ -114,6 +112,9 @@ func export_dda_telemetry():
 						entry.event + "," + entry.details
 			file.store_line(linha)
 		file.close()
+		var folder_path = ProjectSettings.globalize_path("user://")
+		OS.shell_open(folder_path)
+		print("🎧 DADOS DO DDA (ÁUDIO) GRAVADOS COM SUCESSO EM: ", folder_path)
 
 # ==========================================
 # GESTÃO LOCAL (O ATAQUE COMEÇOU/ACABOU)
@@ -131,11 +132,8 @@ func start_attack(attack_name: String):
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_HIGHSHELF, false)
 	
 	if dodges >= 2:
-		# DESAFIO
 		AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, true)
 		
-		# --- AFINAÇÃO INDIVIDUAL ---
-		# Vai buscar o valor exato que definimos para este ataque no dicionário!
 		var volume_amount = attack_history[attack_name]["challenge_volume"]
 		
 		if attack_vol_tween: attack_vol_tween.kill()
@@ -150,7 +148,6 @@ func start_attack(attack_name: String):
 		record_event("Desafio (Abafado)", attack_name) 
 		
 	elif hits > dodges:
-		# AJUDA
 		AudioServer.set_bus_effect_enabled(my_bus, FILTER_HIGHSHELF, true)
 		record_event("Ajuda (Realçado)", attack_name) 
 	else:
@@ -165,7 +162,6 @@ func end_attack():
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, false)
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_HIGHSHELF, false)
 	
-	# Repõe o volume a zero
 	if attack_vol_tween: attack_vol_tween.kill()
 	attack_vol_tween = create_tween()
 	attack_vol_tween.tween_method(func(v): AudioServer.set_bus_volume_db(my_bus, v), AudioServer.get_bus_volume_db(my_bus), 0.0, 0.5)

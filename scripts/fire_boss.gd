@@ -114,6 +114,7 @@ func fire_hand_attack():
 	
 	if sound_hand_cast:
 		audio_player.bus = "Attack_Hand"
+		audio_player.volume_db = 0.0
 		audio_player.stream = sound_hand_cast
 		audio_player.play()
 	
@@ -141,6 +142,7 @@ func meteor_rain_attack():
 	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus(1.5)
 	
 	audio_player.bus = "Attack_Meteor" 
+	audio_player.volume_db = 6.0
 	for i in range(3):
 		if sound_fireball_cast:
 			audio_player.stream = sound_fireball_cast
@@ -197,6 +199,7 @@ func fire_ring_attack():
 	
 	if sound_ring_warning:
 		audio_player.bus = "Attack_Ring"
+		audio_player.volume_db = 0.0
 		audio_player.stream = sound_ring_warning
 		audio_player.play(0.0) 
 	
@@ -259,6 +262,7 @@ func stop_curse_attack():
 		
 	if sound_stop_warning:
 		audio_player.bus = "Attack_Stop"
+		audio_player.volume_db = 0.0
 		audio_player.stream = sound_stop_warning
 		audio_player.play()
 	
@@ -442,6 +446,9 @@ func enter_phase_2():
 	get_tree().paused = false
 
 func die():
+	if not is_clone and is_instance_valid(my_clone) and my_clone.current_health > 0:
+		my_clone.is_clone = false
+		my_clone.attack_timer.start()
 	print("Um Boss foi derrotado!")
 	
 	# Verifica se há mais algum Boss vivo na arena

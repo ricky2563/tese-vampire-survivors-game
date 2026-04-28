@@ -6,7 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://dktu8qfoyqyi" path="res://scenes/boss.tscn" id="3_71j4m"]
 [ext_resource type="PackedScene" uid="uid://cqwuf8x57w6a0" path="res://scenes/dda_panel.tscn" id="4_4mrxx"]
 [ext_resource type="PackedScene" uid="uid://cgfy2a4d6eww1" path="res://scenes/fire_boss.tscn" id="4_qfnet"]
-[ext_resource type="Texture2D" uid="uid://dekmudqvcm6hj" path="res://art/bg_lava.png" id="6_qfnet"]
+[ext_resource type="Texture2D" uid="uid://c6cetakt53yr3" path="res://art/bg_bg.png" id="7_4mrxx"]
 [ext_resource type="AudioStream" uid="uid://7efaxpifbhe0" path="res://audio/background.ogg" id="7_i7141"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_qfnet"]
@@ -33,7 +33,7 @@ offset_left = -2000.0
 offset_top = -2000.0
 offset_right = 2000.0
 offset_bottom = 2000.0
-texture = ExtResource("6_qfnet")
+texture = ExtResource("7_4mrxx")
 stretch_mode = 5
 
 [node name="CanvasLayer" type="CanvasLayer" parent="."]
@@ -61,5 +61,12 @@ stream = ExtResource("7_i7141")
 volume_db = -15.0
 autoplay = true
 bus = &"Music"
+
+[node name="LimitArea" type="StaticBody2D" parent="."]
+
+[node name="CollisionShape2D" type="CollisionPolygon2D" parent="LimitArea"]
+position = Vector2(73, -593)
+build_mode = 1
+polygon = PackedVector2Array(-52, 36, 79, 37, 220, 38, 393, 37, 503, 44, 559, 44, 652, 85, 781, 84, 829, 124, 884, 165, 942, 188, 996, 194, 1027, 205, 1042, 225, 1042, 258, 1037, 276, 1059, 293, 1084, 312, 1108, 327, 1152, 350, 1177, 372, 1202, 609, 1197, 923, 1141, 923, 1089, 891, 1010, 884, 952, 913, 861, 952, 803, 1005, 820, 1089, 854, 1163, 157, 1161, 65, 1092, 25, 1058, -32, 1047, -81, 1084, -127, 1126, -189, 1171, -872, 1168, -838, 1089, -853, 1010, -893, 953, -967, 915, -1032, 887, -1130, 892, -1188, 924, -1218, 928, -1217, 441, -1185, 415, -1178, 343, -1115, 330, -1070, 312, -1051, 254, -1065, 224, -1033, 188, -983, 184, -917, 174, -858, 137, -826, 95, -766, 80, -698, 92, -635, 71, -584, 35)
 
 [connection signal="timeout" from="EnemySpawner" to="." method="_on_enemy_spawner_timeout"]
