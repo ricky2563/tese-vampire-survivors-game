@@ -205,24 +205,28 @@ func setup_button(button, type):
 func draw_temporary_pickup_ring(player):
 	var ring = Line2D.new()
 	
-	# A matemática exata que tens na gema: 20 de base + 10 por cada nível atual
-	var radius = 20.0 + (player.pickup_range_level * 10.0)
+	# O raio da gema (20 + 10 por nível)
+	var gem_radius = 20.0 + (player.pickup_range_level * 10.0)
+	
+	# O tamanho aproximado da hitbox do teu jogador (Ajusta este número se precisares!)
+	var player_body_offset = 15.0 
+	
+	# O raio final do anel visual é a soma dos dois
+	var radius = gem_radius + player_body_offset
 	
 	# Matemática simples para desenhar um círculo com 64 pontas
 	var circle_points = PackedVector2Array()
-	for i in range(65): # 65 para fechar o círculo no último ponto
+	for i in range(65):
 		var angle = (i / 64.0) * TAU
 		circle_points.append(Vector2(cos(angle), sin(angle)) * radius)
 		
 	ring.points = circle_points
 	ring.width = 1.0
-	ring.default_color = Color(0.0, 0.0, 0.0, 0.7) # Verde translúcido brilhante
+	ring.default_color = Color(0.0, 0.0, 0.0, 0.7) 
 	
-	# Adicionamos o anel como filho do jogador para que ande sempre com ele
 	player.add_child(ring)
 	
-	# O TOQUE DE MESTRE: Um Tween para o anel desaparecer suavemente!
 	var tween = ring.create_tween()
-	tween.tween_interval(4.5) # Fica totalmente visível durante 4.5 segundos
-	tween.tween_property(ring, "modulate:a", 0.0, 0.5) # Em 0.5s fica invisível
-	tween.tween_callback(ring.queue_free) # Deita o anel ao lixo quando acabar
+	tween.tween_interval(4.5) 
+	tween.tween_property(ring, "modulate:a", 0.0, 0.5) 
+	tween.tween_callback(ring.queue_free)

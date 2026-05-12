@@ -2,6 +2,10 @@ extends Node
 
 var is_dda_active = true 
 
+enum TestMode { DYNAMIC, ALWAYS_EASY, ALWAYS_CHALLENGE }
+
+var current_test_mode: TestMode = TestMode.DYNAMIC
+
 var bus_music: int
 var bus_horde: int
 var bus_threats: int
@@ -16,12 +20,14 @@ const FILTER_HIGHSHELF = 1 # Ajuda (Realça)
 
 # ==========================================
 # O DICIONÁRIO AGORA TEM AFINAÇÃO INDIVIDUAL ("challenge_volume")
+# E INCLUI A NOVA DE FOGO DA FASE 4
 # ==========================================
 var attack_history = {
 	"Boss: Meteor Attack": {"hits": 0, "dodges": 0, "bus_name": "Attack_Meteor", "challenge_volume": 2.0},
 	"Boss: Ring Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Ring",   "challenge_volume": -2.0},
 	"Boss: Stop Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Stop",   "challenge_volume": 0.0}, 
-	"Boss: Hand Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Hand",   "challenge_volume": 1.0}
+	"Boss: Hand Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Hand",   "challenge_volume": 1.0},
+	"Boss: Nova Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Meteor", "challenge_volume": 2.0}
 }
 
 var current_active_attack = ""
@@ -55,10 +61,17 @@ func _process(delta):
 	play_time += delta 
 	time_since_last_damage += delta
 	
-	if time_since_last_damage > 20.0 and not is_ducking:
-		horde_pressure_level = min(horde_pressure_level + (delta * 0.2), 5.0)
-		if not cluster_tween or not cluster_tween.is_running():
-			AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
+	if current_test_mode == TestMode.ALWAYS_CHALLENGE:
+		horde_pressure_level = 5.0
+		AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
+	elif current_test_mode == TestMode.ALWAYS_EASY:
+		horde_pressure_level = 0.0
+		AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
+	else:
+		if time_since_last_damage > 20.0 and not is_ducking:
+			horde_pressure_level = min(horde_pressure_level + (delta * 0.2), 5.0)
+			if not cluster_tween or not cluster_tween.is_running():
+				AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
 		
 	log_timer += delta
 	if log_timer >= 0.5:
@@ -70,6 +83,7 @@ func _process(delta):
 			"meteor_state": get_dda_state(bus_attack_meteor),
 			"ring_state": get_dda_state(bus_attack_ring),
 			"stop_state": get_dda_state(bus_attack_stop),
+			"nova_state": get_dda_state(bus_attack_meteor), # <--- NOVO
 			"event": "", 
 			"details": ""
 		})
@@ -92,6 +106,7 @@ func record_event(event_name: String, details: String = ""):
 		"meteor_state": get_dda_state(bus_attack_meteor),
 		"ring_state": get_dda_state(bus_attack_ring),
 		"stop_state": get_dda_state(bus_attack_stop),
+		"nova_state": get_dda_state(bus_attack_meteor), # <--- NOVO
 		"event": event_name, 
 		"details": details
 	})
@@ -100,7 +115,8 @@ func export_dda_telemetry():
 	if dda_log.is_empty(): return
 	var file = FileAccess.open("user://grafico_dda_audio.csv", FileAccess.WRITE)
 	if file:
-		file.store_line("Tempo(s),Horda(dB),Musica(dB),Mao(Estado),Meteoro(Estado),Anel(Estado),Stop(Estado),Evento,Detalhes")
+		# CABEÇALHO ATUALIZADO COM A NOVA
+		file.store_line("Tempo(s),Horda(dB),Musica(dB),Mao(Estado),Meteoro(Estado),Anel(Estado),Stop(Estado),Nova(Estado),Evento,Detalhes")
 		for entry in dda_log:
 			var linha = str(snapped(entry.time, 0.1)) + "," + \
 						str(snapped(entry.horde_vol, 0.1)) + "," + \
@@ -109,6 +125,7 @@ func export_dda_telemetry():
 						str(entry.meteor_state) + "," + \
 						str(entry.ring_state) + "," + \
 						str(entry.stop_state) + "," + \
+						str(entry.nova_state) + "," + \
 						entry.event + "," + entry.details
 			file.store_line(linha)
 		file.close()
@@ -124,34 +141,52 @@ func start_attack(attack_name: String):
 	
 	if not is_dda_active or not attack_history.has(attack_name): return
 	
-	var dodges = attack_history[attack_name]["dodges"]
-	var hits = attack_history[attack_name]["hits"]
 	var my_bus = AudioServer.get_bus_index(attack_history[attack_name]["bus_name"])
 	
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, false)
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_HIGHSHELF, false)
 	
-	if dodges >= 2:
+	# ----------------------------------------------------
+	# DECISÃO DO MODO
+	# ----------------------------------------------------
+	var force_challenge = false
+	var force_easy = false
+	
+	if current_test_mode == TestMode.ALWAYS_CHALLENGE:
+		force_challenge = true
+	elif current_test_mode == TestMode.ALWAYS_EASY:
+		force_easy = true
+	else:
+		# DDA NORMAL DINÂMICO
+		var dodges = attack_history[attack_name]["dodges"]
+		var hits = attack_history[attack_name]["hits"]
+		if dodges >= 2: force_challenge = true
+		elif hits > dodges: force_easy = true
+
+	# ----------------------------------------------------
+	# APLICAÇÃO DO ÁUDIO
+	# ----------------------------------------------------
+	if force_challenge:
 		AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, true)
-		
 		var volume_amount = attack_history[attack_name]["challenge_volume"]
 		
 		if attack_vol_tween: attack_vol_tween.kill()
 		attack_vol_tween = create_tween()
 		attack_vol_tween.tween_method(func(v): AudioServer.set_bus_volume_db(my_bus, v), 0.0, volume_amount, 0.5)
 		
-		if not is_ducking:
+		if not is_ducking and current_test_mode != TestMode.ALWAYS_CHALLENGE:
+			# Só anima a horda se não for o ALWAYS_CHALLENGE, pois esse já tranca no máximo no _process
 			if cluster_tween: cluster_tween.kill()
 			cluster_tween = create_tween()
 			cluster_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), AudioServer.get_bus_volume_db(bus_horde), horde_pressure_level + 1.5, 1.0)
 			
-		record_event("Desafio (Abafado)", attack_name) 
+		record_event("Desafio (Abafado/Forçado)", attack_name) 
 		
-	elif hits > dodges:
+	elif force_easy:
 		AudioServer.set_bus_effect_enabled(my_bus, FILTER_HIGHSHELF, true)
-		record_event("Ajuda (Realçado)", attack_name) 
+		record_event("Ajuda (Realçado/Forçada)", attack_name) 
 	else:
-		record_event("Normal (Sem Filtros)", attack_name) 
+		record_event("Normal (Sem Filtros)", attack_name)
 
 func end_attack():
 	if current_active_attack == "" or not attack_history.has(current_active_attack): return
@@ -190,7 +225,10 @@ func register_damage(source: String):
 func trigger_threat_focus(duration: float):
 	if not is_dda_active or is_ducking: return 
 	if current_active_attack == "" or not attack_history.has(current_active_attack): return
-	if attack_history[current_active_attack]["hits"] <= attack_history[current_active_attack]["dodges"]: return 
+	if current_test_mode == TestMode.ALWAYS_CHALLENGE: return
+	
+	if current_test_mode == TestMode.DYNAMIC and attack_history[current_active_attack]["hits"] <= attack_history[current_active_attack]["dodges"]: 
+		return
 		
 	is_ducking = true
 	record_event("Ducking Ativado", "Micro-ajuste -1.0dB") 

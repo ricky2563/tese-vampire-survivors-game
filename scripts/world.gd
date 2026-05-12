@@ -31,18 +31,76 @@ var boss_fire_spawned = false
 var barrier_right_spawned = false
 var barrier_left_spawned = false
 var is_game_over = false
+var is_paused = false
+var pause_canvas: CanvasLayer = null
 
 
 func _ready():
-	# 1. Limpa os dados da partida anterior que ficaram no Autoload
+	# 1. Congela o jogo logo ao abrir para esperar pela escolha do jogador
+	get_tree().paused = true
+	
+	# 2. Limpa os dados da partida anterior
 	EnemyManager.clear_all_enemies()
 	
-	# 2. Reset de variáveis de controlo do mundo
+	# 3. Reset de variáveis de controlo do mundo
 	enemies_spawned = 0
 	game_time = 0.0
 	boss_fire_spawned = false
 	barrier_right_spawned = false
 	barrier_left_spawned = false
+	
+	# 4. Chama o Menu de Seleção de DDA
+	create_mode_selection_menu()
+
+
+func create_mode_selection_menu():
+	var canvas = CanvasLayer.new()
+	canvas.process_mode = Node.PROCESS_MODE_ALWAYS # Crucial para funcionar em pausa
+	canvas.layer = 120 # Fica acima de tudo
+	add_child(canvas)
+	
+	var bg = ColorRect.new()
+	bg.color = Color(0.05, 0.05, 0.1, 0.95)
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	canvas.add_child(bg)
+
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	canvas.add_child(center)
+	
+	var vbox = VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 25)
+	center.add_child(vbox)
+	
+	var title = Label.new()
+	title.text = "SELECT TEST MODE"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 40)
+	vbox.add_child(title)
+
+	# --- BOTÕES ---
+	create_mode_button(vbox, "DYNAMIC (Normal DDA)", Color(0.8, 0.8, 0.8), canvas, DDAManager.TestMode.DYNAMIC)
+	create_mode_button(vbox, "ALWAYS EASY (Min Limit)", Color(0.4, 1.0, 0.4), canvas, DDAManager.TestMode.ALWAYS_EASY)
+	create_mode_button(vbox, "ALWAYS CHALLENGE (Max Limit)", Color(1.0, 0.4, 0.4), canvas, DDAManager.TestMode.ALWAYS_CHALLENGE)
+
+# Função auxiliar para desenhar os botões
+func create_mode_button(container, text, color, canvas, mode_enum):
+	var btn = Button.new()
+	btn.text = text
+	btn.custom_minimum_size = Vector2(350, 60)
+	btn.modulate = color
+	container.add_child(btn)
+	
+	btn.pressed.connect(func():
+		DDAManager.current_test_mode = mode_enum
+		print("TEST MODE SELECTED: ", mode_enum)
+		canvas.queue_free() # Destrói o menu
+		start_the_game()    # Arranca o jogo
+	)
+
+func start_the_game():
+	get_tree().paused = false # Descongela o jogo
+	print("Jogo Iniciado! O tempo começou a contar.")
 
 # ========================
 # TIME CONTROL
@@ -457,6 +515,11 @@ func spawn_enemy_at(pos, is_tank = false):
 func _input(event):
 	if event is InputEventKey and event.pressed:
 		match event.keycode:
+			KEY_ESCAPE:
+				if not is_game_over and not is_paused:
+					print("A tentar pausar...")
+					get_viewport().set_input_as_handled() # <--- O SEGREDO ESTÁ AQUI
+					toggle_pause()
 			KEY_1:
 				spawn_mode = SpawnMode.CONTINUOUS
 				print("Modo: CONTINUOUS")
@@ -475,7 +538,7 @@ func _input(event):
 			KEY_N:
 				spawn_boss_fire()
 				print("Boss FIRE spawnado")
-			KEY_SPACE:   # <--- tecla espaço
+			KEY_L:
 				clear_enemies()
 			KEY_TAB:
 				toggle_panel()
@@ -506,3 +569,76 @@ func toggle_panel():
 	else:
 		# Se já existe, liga e desliga a visibilidade
 		panel_instance.visible = !panel_instance.visible
+		
+func toggle_pause():
+	if is_game_over: return
+
+	is_paused = !is_paused
+	get_tree().paused = is_paused
+
+	if is_paused:
+		print("MENU: Pausa ativada! Congelou.")
+		if pause_canvas == null:
+			create_pause_menu()
+		pause_canvas.visible = true
+	else:
+		print("MENU: Jogo retomado.")
+		if pause_canvas != null:
+			pause_canvas.visible = false
+
+func create_pause_menu():
+	pause_canvas = CanvasLayer.new()
+	# PROCESS_MODE_ALWAYS garante que este menu continua a funcionar enquanto o jogo dorme!
+	pause_canvas.process_mode = Node.PROCESS_MODE_ALWAYS 
+	pause_canvas.layer = 105 # Fica acima do HUD normal
+	add_child(pause_canvas)
+
+	var bg = ColorRect.new()
+	bg.color = Color(0, 0, 0, 0.8) # Fundo escuro semi-transparente
+	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pause_canvas.add_child(bg)
+
+	var center = CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	pause_canvas.add_child(center)
+
+	var vbox = VBoxContainer.new()
+	vbox.alignment = BoxContainer.ALIGNMENT_CENTER
+	vbox.add_theme_constant_override("separation", 20)
+	center.add_child(vbox)
+
+	var title = Label.new()
+	title.text = "PAUSA"
+	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	title.add_theme_font_size_override("font_size", 40)
+	vbox.add_child(title)
+
+	# --- BOTÃO CONTINUAR ---
+	var btn_continue = Button.new()
+	btn_continue.text = "Continuar (ESC)"
+	btn_continue.custom_minimum_size = Vector2(250, 60)
+	btn_continue.pressed.connect(toggle_pause)
+	
+	# O Truque: O Botão ouve a tecla ESC sozinho mesmo com o jogo pausado!
+	var esc_shortcut = Shortcut.new()
+	var esc_event = InputEventKey.new()
+	esc_event.keycode = KEY_ESCAPE
+	esc_shortcut.events = [esc_event]
+	btn_continue.shortcut = esc_shortcut
+	
+	vbox.add_child(btn_continue)
+
+	# --- BOTÃO RESET ---
+	var btn_reset = Button.new()
+	btn_reset.text = "Reiniciar (R)"
+	btn_reset.custom_minimum_size = Vector2(250, 60)
+	btn_reset.pressed.connect(restart_game)
+	
+	# O Truque: O Botão ouve a tecla R sozinho mesmo com o jogo pausado!
+	var r_shortcut = Shortcut.new()
+	var r_event = InputEventKey.new()
+	r_event.keycode = KEY_R
+	r_shortcut.events = [r_event]
+	btn_reset.shortcut = r_shortcut
+	
+	vbox.add_child(btn_reset)

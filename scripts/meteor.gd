@@ -3,15 +3,19 @@ extends Node2D
 @export var fall_time = 0.5
 @export var damage = 15
 @export var shadow_scene: PackedScene
+@export var phase_4_texture: Texture2D
 
 var shadow
 var target_position
 var start_position
+var is_phase_4 = false
 
 @onready var sprite = $Sprite2D
 
 func _ready():
 	# Meteoro começa bem lá no alto (fora do ecrã)
+	if is_phase_4 and phase_4_texture != null:
+		sprite.texture = phase_4_texture
 	start_position = target_position + Vector2(0, -500) 
 	global_position = start_position
 	
