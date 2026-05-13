@@ -135,7 +135,7 @@ func fire_hand_attack():
 	if DDAManager.has_method("start_attack"):
 		DDAManager.start_attack("Boss: Hand Attack")
 	
-	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus(0.5)
+	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Hand Attack", 0.5)
 	
 	if sound_hand_cast:
 		audio_player.bus = "Attack_Hand"
@@ -152,7 +152,7 @@ func fire_hand_attack():
 	is_attacking = false
 	
 	if DDAManager.has_method("end_attack"):
-		DDAManager.end_attack()
+		DDAManager.end_attack("Boss: Hand Attack")
 
 func meteor_rain_attack():
 	if not player: return
@@ -162,7 +162,7 @@ func meteor_rain_attack():
 	if DDAManager.has_method("start_attack"):
 		DDAManager.start_attack("Boss: Meteor Attack")
 	
-	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus(1.5)
+	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Meteor Attack", 1.5)
 	
 	audio_player.bus = "Attack_Meteor" 
 	audio_player.volume_db = 6.0
@@ -197,7 +197,7 @@ func meteor_rain_attack():
 	is_attacking = false
 	
 	if DDAManager.has_method("end_attack"):
-		DDAManager.end_attack()
+		DDAManager.end_attack("Boss: Meteor Attack")
 
 func spawn_meteor(pos):
 	var meteor = meteor_scene.instantiate()
@@ -218,7 +218,7 @@ func fire_ring_attack():
 	
 	var duration = 4.5 if current_phase >= 2 else 7.0
 	
-	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus(duration)
+	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Ring Attack", duration)
 	
 	if sound_ring_warning:
 		audio_player.bus = "Attack_Ring"
@@ -266,7 +266,7 @@ func fire_ring_attack():
 	is_attacking = false
 	
 	if DDAManager.has_method("end_attack"):
-		DDAManager.end_attack()
+		DDAManager.end_attack("Boss: Ring Attack")
 	
 func stop_curse_attack():
 	if current_phase == 2 or current_phase == 3:
@@ -284,7 +284,7 @@ func stop_curse_attack():
 	var telegraph_time = 1.2
 	var check_time = 0.3
 	
-	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus(telegraph_time + check_time)
+	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Stop Attack", telegraph_time + check_time)
 		
 	if sound_stop_warning:
 		audio_player.bus = "Attack_Stop"
@@ -343,30 +343,23 @@ func stop_curse_attack():
 	is_attacking = false
 	
 	if DDAManager.has_method("end_attack"):
-		DDAManager.end_attack()
+		DDAManager.end_attack("Boss: Stop Attack")
 
-# --- NOVO ATAQUE: NOVA DE FOGO EM ESPIRAL (FASE 4) ---
 func fire_nova_attack():
 	if not player or fire_hand_scene == null: return
 	is_attacking = true
 	
 	if DDAManager.has_method("start_attack"): DDAManager.start_attack("Boss: Nova Attack")
-	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus(2.0)
+	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Nova Attack", 2.0)
 	
 	var temp_speed = speed
 	speed = speed * 0.2 
 	
-	if sound_nova_warning:
-		audio_player.bus = "Attack_Meteor"
-		audio_player.volume_db = 0.0
-		audio_player.stream = sound_nova_warning
-		audio_player.play()
-		
 	await get_tree().create_timer(1.0, false).timeout
 	if not is_inside_tree(): return
 	
-	var num_hands = 24       
-	var radius_step = 25     
+	var num_hands = 24        
+	var radius_step = 25      
 	var angle_step = PI / 4.0 
 	
 	for i in range(num_hands):
@@ -385,13 +378,39 @@ func fire_nova_attack():
 			attack.is_tracking = false
 		if "is_nova" in attack:
 			attack.is_nova = true
+
+		if i == 0 or i == 8 or i == 16:
+			var pitch = 0.85
+			if i == 8: pitch = 1.0
+			if i == 16: pitch = 1.15
+			
+			play_delayed_tum(pitch, attack.track_duration)
+		# ==========================================
+		
 		get_tree().current_scene.add_child(attack)
 		
 		await get_tree().create_timer(0.06, false).timeout
 		
 	speed = temp_speed
 	is_attacking = false
-	if DDAManager.has_method("end_attack"): DDAManager.end_attack()
+	
+	# Repõe o som normal para os próximos ataques
+	if sound_nova_warning:
+		audio_player.pitch_scale = 1.0 
+		
+	if DDAManager.has_method("end_attack"): DDAManager.end_attack("Boss: Nova Attack")
+
+
+# ==========================================
+func play_delayed_tum(pitch_val: float, delay: float):
+	await get_tree().create_timer(delay, false).timeout
+	
+	if not is_inside_tree() or not sound_nova_warning: return
+	
+	audio_player.bus = "Attack_Nova"
+	audio_player.stream = sound_nova_warning
+	audio_player.pitch_scale = pitch_val
+	audio_player.play(0.0)
 	
 # ==========================================
 # SISTEMA DE DANO E MUDANÇAS DE FASE
@@ -406,7 +425,7 @@ func take_damage(amount):
 	var tween = create_tween()
 	tween.tween_property(self, "modulate", Color.WHITE, 0.15)
 	
-	if current_health <= (max_health * 0.75) and current_phase == 1 and not is_clone:
+	if current_health <= (max_health * 0.60) and current_phase == 1 and not is_clone:
 		enter_phase_2()
 		
 	elif current_health <= (max_health * 0.40) and current_phase == 2 and not is_clone:
@@ -561,8 +580,8 @@ func enter_phase_4():
 	await restore_tween.finished
 	if not is_inside_tree(): return
 	
-	current_health = max_health * 0.20
-	speed = original_speed * 1.5 
+	current_health = max_health * 0.30
+	speed = original_speed * 2 
 	is_invulnerable = false
 	is_attacking = false
 	

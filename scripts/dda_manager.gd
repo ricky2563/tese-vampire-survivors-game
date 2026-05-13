@@ -14,9 +14,18 @@ var bus_attack_hand: int
 var bus_attack_meteor: int
 var bus_attack_ring: int
 var bus_attack_stop: int
+var bus_attack_nova: int
 
 const FILTER_LOWPASS = 0   # Desafio (Abafa)
 const FILTER_HIGHSHELF = 1 # Ajuda (Realça)
+
+# ==========================================
+# PAINEL DE AFINAÇÃO DO DDA (Dashboard no Inspector)
+# ==========================================
+@export_category("Afinações DDA - Tempos de Crise")
+@export var duck_horde_db: float = -1.0
+@export var duck_music_db: float = -1.0
+@export var challenge_horde_boost: float = 1.5
 
 # ==========================================
 # O DICIONÁRIO AGORA TEM AFINAÇÃO INDIVIDUAL ("challenge_volume")
@@ -27,18 +36,16 @@ var attack_history = {
 	"Boss: Ring Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Ring",   "challenge_volume": -2.0},
 	"Boss: Stop Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Stop",   "challenge_volume": 0.0}, 
 	"Boss: Hand Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Hand",   "challenge_volume": 1.0},
-	"Boss: Nova Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Meteor", "challenge_volume": 2.0}
+	"Boss: Nova Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Nova",   "challenge_volume": 2.0}
 }
 
-var current_active_attack = ""
+# Variáveis do DDA substituídas para aceitar múltiplos Bosses:
+var active_duckings = 0 # Conta quantos ataques precisam de silêncio (substitui o is_ducking)
+var attack_tweens = {} # Guarda os Tweens de cada ataque em separado
 
 var time_since_last_damage = 0.0
 var horde_pressure_level = 0.0
-var is_ducking = false
-
-# Tweens
 var cluster_tween: Tween 
-var attack_vol_tween: Tween 
 
 # Telemetria
 var dda_log = []
@@ -54,6 +61,7 @@ func _ready():
 	bus_attack_meteor = AudioServer.get_bus_index("Attack_Meteor")
 	bus_attack_ring = AudioServer.get_bus_index("Attack_Ring")
 	bus_attack_stop = AudioServer.get_bus_index("Attack_Stop")
+	bus_attack_nova = AudioServer.get_bus_index("Attack_Nova")
 
 func _process(delta):
 	if not is_dda_active: return
@@ -68,7 +76,7 @@ func _process(delta):
 		horde_pressure_level = 0.0
 		AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
 	else:
-		if time_since_last_damage > 20.0 and not is_ducking:
+		if time_since_last_damage > 20.0 and active_duckings == 0:
 			horde_pressure_level = min(horde_pressure_level + (delta * 0.2), 5.0)
 			if not cluster_tween or not cluster_tween.is_running():
 				AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
@@ -83,7 +91,7 @@ func _process(delta):
 			"meteor_state": get_dda_state(bus_attack_meteor),
 			"ring_state": get_dda_state(bus_attack_ring),
 			"stop_state": get_dda_state(bus_attack_stop),
-			"nova_state": get_dda_state(bus_attack_meteor), # <--- NOVO
+			"nova_state": get_dda_state(bus_attack_nova),
 			"event": "", 
 			"details": ""
 		})
@@ -106,7 +114,7 @@ func record_event(event_name: String, details: String = ""):
 		"meteor_state": get_dda_state(bus_attack_meteor),
 		"ring_state": get_dda_state(bus_attack_ring),
 		"stop_state": get_dda_state(bus_attack_stop),
-		"nova_state": get_dda_state(bus_attack_meteor), # <--- NOVO
+		"nova_state": get_dda_state(bus_attack_nova),
 		"event": event_name, 
 		"details": details
 	})
@@ -115,7 +123,6 @@ func export_dda_telemetry():
 	if dda_log.is_empty(): return
 	var file = FileAccess.open("user://grafico_dda_audio.csv", FileAccess.WRITE)
 	if file:
-		# CABEÇALHO ATUALIZADO COM A NOVA
 		file.store_line("Tempo(s),Horda(dB),Musica(dB),Mao(Estado),Meteoro(Estado),Anel(Estado),Stop(Estado),Nova(Estado),Evento,Detalhes")
 		for entry in dda_log:
 			var linha = str(snapped(entry.time, 0.1)) + "," + \
@@ -137,8 +144,6 @@ func export_dda_telemetry():
 # GESTÃO LOCAL (O ATAQUE COMEÇOU/ACABOU)
 # ==========================================
 func start_attack(attack_name: String):
-	current_active_attack = attack_name
-	
 	if not is_dda_active or not attack_history.has(attack_name): return
 	
 	var my_bus = AudioServer.get_bus_index(attack_history[attack_name]["bus_name"])
@@ -146,9 +151,6 @@ func start_attack(attack_name: String):
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, false)
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_HIGHSHELF, false)
 	
-	# ----------------------------------------------------
-	# DECISÃO DO MODO
-	# ----------------------------------------------------
 	var force_challenge = false
 	var force_easy = false
 	
@@ -157,28 +159,25 @@ func start_attack(attack_name: String):
 	elif current_test_mode == TestMode.ALWAYS_EASY:
 		force_easy = true
 	else:
-		# DDA NORMAL DINÂMICO
 		var dodges = attack_history[attack_name]["dodges"]
 		var hits = attack_history[attack_name]["hits"]
 		if dodges >= 2: force_challenge = true
 		elif hits > dodges: force_easy = true
 
-	# ----------------------------------------------------
-	# APLICAÇÃO DO ÁUDIO
-	# ----------------------------------------------------
 	if force_challenge:
 		AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, true)
 		var volume_amount = attack_history[attack_name]["challenge_volume"]
 		
-		if attack_vol_tween: attack_vol_tween.kill()
-		attack_vol_tween = create_tween()
-		attack_vol_tween.tween_method(func(v): AudioServer.set_bus_volume_db(my_bus, v), 0.0, volume_amount, 0.5)
+		# Anima só a pista deste ataque
+		if attack_tweens.has(attack_name) and attack_tweens[attack_name]: 
+			attack_tweens[attack_name].kill()
+		attack_tweens[attack_name] = create_tween()
+		attack_tweens[attack_name].tween_method(func(v): AudioServer.set_bus_volume_db(my_bus, v), 0.0, volume_amount, 0.5)
 		
-		if not is_ducking and current_test_mode != TestMode.ALWAYS_CHALLENGE:
-			# Só anima a horda se não for o ALWAYS_CHALLENGE, pois esse já tranca no máximo no _process
+		if active_duckings == 0 and current_test_mode != TestMode.ALWAYS_CHALLENGE:
 			if cluster_tween: cluster_tween.kill()
 			cluster_tween = create_tween()
-			cluster_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), AudioServer.get_bus_volume_db(bus_horde), horde_pressure_level + 1.5, 1.0)
+			cluster_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), AudioServer.get_bus_volume_db(bus_horde), horde_pressure_level + challenge_horde_boost, 1.0)
 			
 		record_event("Desafio (Abafado/Forçado)", attack_name) 
 		
@@ -188,30 +187,30 @@ func start_attack(attack_name: String):
 	else:
 		record_event("Normal (Sem Filtros)", attack_name)
 
-func end_attack():
-	if current_active_attack == "" or not attack_history.has(current_active_attack): return
+# AGORA EXIGE O NOME PARA SABER QUE ATAQUE DEVE DESLIGAR
+func end_attack(attack_name: String):
+	if not attack_history.has(attack_name): return
 	
-	attack_history[current_active_attack]["dodges"] += 1
+	attack_history[attack_name]["dodges"] += 1
 		
-	var my_bus = AudioServer.get_bus_index(attack_history[current_active_attack]["bus_name"])
+	var my_bus = AudioServer.get_bus_index(attack_history[attack_name]["bus_name"])
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, false)
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_HIGHSHELF, false)
 	
-	if attack_vol_tween: attack_vol_tween.kill()
-	attack_vol_tween = create_tween()
-	attack_vol_tween.tween_method(func(v): AudioServer.set_bus_volume_db(my_bus, v), AudioServer.get_bus_volume_db(my_bus), 0.0, 0.5)
+	if attack_tweens.has(attack_name) and attack_tweens[attack_name]: 
+		attack_tweens[attack_name].kill()
+	attack_tweens[attack_name] = create_tween()
+	attack_tweens[attack_name].tween_method(func(v): AudioServer.set_bus_volume_db(my_bus, v), AudioServer.get_bus_volume_db(my_bus), 0.0, 0.5)
 	
-	if not is_ducking:
+	if active_duckings == 0:
 		if cluster_tween: cluster_tween.kill()
 		cluster_tween = create_tween()
 		cluster_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), AudioServer.get_bus_volume_db(bus_horde), horde_pressure_level, 1.5)
-		
-	current_active_attack = ""
 
 func register_damage(source: String):
 	time_since_last_damage = 0.0 
 	horde_pressure_level = 0.0
-	if not is_ducking:
+	if active_duckings == 0:
 		AudioServer.set_bus_volume_db(bus_horde, 0.0) 
 	
 	if attack_history.has(source):
@@ -220,28 +219,30 @@ func register_damage(source: String):
 		record_event("Dano Sofrido", source)
 
 # ==========================================
-# FOCUS GERAL (Ducking para Ajuda)
+# FOCUS GERAL (Ducking para Ajuda - Agora independente)
 # ==========================================
-func trigger_threat_focus(duration: float):
-	if not is_dda_active or is_ducking: return 
-	if current_active_attack == "" or not attack_history.has(current_active_attack): return
+func trigger_threat_focus(attack_name: String, duration: float):
+	if not is_dda_active or not attack_history.has(attack_name): return 
 	if current_test_mode == TestMode.ALWAYS_CHALLENGE: return
 	
-	if current_test_mode == TestMode.DYNAMIC and attack_history[current_active_attack]["hits"] <= attack_history[current_active_attack]["dodges"]: 
+	if current_test_mode == TestMode.DYNAMIC and attack_history[attack_name]["hits"] <= attack_history[attack_name]["dodges"]: 
 		return
 		
-	is_ducking = true
-	record_event("Ducking Ativado", "Micro-ajuste -1.0dB") 
+	# Mete o pedido de silêncio na fila
+	active_duckings += 1
+	record_event("Ducking Ativado", "Micro-ajuste Horda/Musica") 
 	
 	var duck_tween = create_tween().set_parallel(true)
-	duck_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), AudioServer.get_bus_volume_db(bus_horde), horde_pressure_level - 1.0, 0.4).set_ease(Tween.EASE_OUT)
-	duck_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_music, v), AudioServer.get_bus_volume_db(bus_music), -1.0, 0.4).set_ease(Tween.EASE_OUT)
+	duck_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), AudioServer.get_bus_volume_db(bus_horde), horde_pressure_level + duck_horde_db, 0.4).set_ease(Tween.EASE_OUT)
+	duck_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_music, v), AudioServer.get_bus_volume_db(bus_music), duck_music_db, 0.4).set_ease(Tween.EASE_OUT)
 
 	await get_tree().create_timer(duration, false).timeout
 
-	var restore_tween = create_tween().set_parallel(true)
-	restore_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), horde_pressure_level - 1.0, horde_pressure_level, 0.8).set_ease(Tween.EASE_IN_OUT)
-	restore_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_music, v), -1.0, 0.0, 0.8).set_ease(Tween.EASE_IN_OUT)
+	# Tira o pedido da fila
+	active_duckings = max(0, active_duckings - 1)
 	
-	await restore_tween.finished
-	is_ducking = false
+	# Só repõe o volume no ecrã se mais nenhum ataque estiver a precisar de ajuda
+	if active_duckings == 0:
+		var restore_tween = create_tween().set_parallel(true)
+		restore_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), horde_pressure_level + duck_horde_db, horde_pressure_level, 0.8).set_ease(Tween.EASE_IN_OUT)
+		restore_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_music, v), duck_music_db, 0.0, 0.8).set_ease(Tween.EASE_IN_OUT)

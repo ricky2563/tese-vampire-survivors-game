@@ -7,7 +7,7 @@ extends Node2D
 @export var elite_sprite: Texture2D
 @export var elite_mutated_sprite: Texture2D
 @export var gem_scene: PackedScene
-@export var max_enemies = 480
+@export var max_enemies = 350
 @export var max_tanks_allowed = 250
 @export var attack_radius = 30.0
 @export var attack_damage = 5

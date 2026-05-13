@@ -8,8 +8,10 @@ var enemies_hit = []
 
 # --- NOVAS VARIÁVEIS ---
 var damage = 30
-var hit_radius = 20.0 # O tamanho da "área de impacto" matemática da bala
-var hit_cooldown = 0.0 # Impede que a bala acerte no mesmo inimigo 60 vezes num segundo
+var hit_radius = 20.0 
+var hit_cooldown = 0.0
+var math_check_timer = 0.0
+var MATH_CHECK_INTERVAL = 0.05
 
 func _physics_process(delta):
 	# 1. Movimento da Bala
@@ -19,20 +21,25 @@ func _physics_process(delta):
 	travelled_distance += speed * delta
 	if travelled_distance > bullet_range:
 		queue_free()
-		return # Sai da função para evitar erros depois de destruída
+		return
 		
-	# 2. COLISÃO MATEMÁTICA (Para a Horda do MultiMesh)
+	# 2. COLISÃO MATEMÁTICA (Horda)
 	if hit_cooldown > 0:
 		hit_cooldown -= delta
 	else:
-		# Pergunta ao Autoload se bateu nalguma coordenada inimiga
-		if EnemyManager.check_bullet_hit(global_position, hit_radius, damage):
-			piercing -= 1
-			hit_cooldown = 0.1 # Dá um pequeno tempo antes de poder furar o próximo (evita gastar o piercing todo num só frame)
+		# Só faz a matemática pesada se o micro-timer apitar!
+		math_check_timer -= delta
+		if math_check_timer <= 0.0:
+			math_check_timer = MATH_CHECK_INTERVAL # Reseta o relógio
 			
-			if piercing < 0:
-				queue_free()
-				return
+			# Pergunta ao Autoload se bateu nalguma coordenada inimiga
+			if EnemyManager.check_bullet_hit(global_position, hit_radius, damage):
+				piercing -= 1
+				hit_cooldown = 0.1 # Dá um tempo maior porque ACERTOU
+				
+				if piercing < 0:
+					queue_free()
+					return
 
 # ==========================================
 # 3. COLISÃO FÍSICA (Para os Bosses)

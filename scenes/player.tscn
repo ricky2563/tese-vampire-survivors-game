@@ -97,6 +97,7 @@ font_size = 20
 outline_size = 4
 
 [node name="Player" type="CharacterBody2D" groups=["player"]]
+z_index = 1
 script = ExtResource("1_g2els")
 umbrella_scene = ExtResource("2_tuyoq")
 

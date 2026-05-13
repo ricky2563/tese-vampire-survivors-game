@@ -1,4 +1,4 @@
-[gd_scene load_steps=20 format=3 uid="uid://cgfy2a4d6eww1"]
+[gd_scene load_steps=21 format=3 uid="uid://cgfy2a4d6eww1"]
 
 [ext_resource type="Texture2D" uid="uid://pf43w664fc6p" path="res://art/boss_fogo.png" id="1_h8q6f"]
 [ext_resource type="Script" uid="uid://vftbrktvsytp" path="res://scripts/fire_boss.gd" id="1_nsgjb"]
@@ -10,6 +10,7 @@
 [ext_resource type="AudioStream" uid="uid://dshfyd182lnkb" path="res://audio/hand_pre_audio.wav" id="6_dh0d8"]
 [ext_resource type="AudioStream" uid="uid://c8semhtskdwil" path="res://audio/stop_warning.wav" id="7_8yh2n"]
 [ext_resource type="AudioStream" uid="uid://np34dr5ykkyc" path="res://audio/stop_snap.mp3" id="8_lo3o5"]
+[ext_resource type="AudioStream" uid="uid://d1squhmpit6ln" path="res://audio/nova_stomps.mp3" id="9_n0vfx"]
 [ext_resource type="Texture2D" uid="uid://bh6s7kal633ei" path="res://art/boss_fogo_attacks.png" id="9_wgrw4"]
 [ext_resource type="Texture2D" uid="uid://u3uq5lvigy74" path="res://art/boss_fogo_2_phase.png" id="10_lo3o5"]
 [ext_resource type="Texture2D" uid="uid://vc280bschq53" path="res://art/pointing_arrow.png" id="13_j4vko"]
@@ -68,6 +69,7 @@ sound_ring_warning = ExtResource("5_mw820")
 sound_hand_cast = ExtResource("6_dh0d8")
 sound_stop_warning = ExtResource("7_8yh2n")
 sound_stop_snap = ExtResource("8_lo3o5")
+sound_nova_warning = ExtResource("9_n0vfx")
 fire_ring_scene = ExtResource("5_bbvdf")
 phase_4_texture = ExtResource("10_lo3o5")
 
