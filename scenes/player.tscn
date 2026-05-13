@@ -6,7 +6,7 @@
 [ext_resource type="PackedScene" uid="uid://capqpepwdukom" path="res://scenes/gun.tscn" id="3_qhqgy"]
 [ext_resource type="Texture2D" uid="uid://48686buu5h8b" path="res://art/player_move_right.png" id="3_tuyoq"]
 [ext_resource type="Texture2D" uid="uid://bakw5ah4r22be" path="res://art/weapons.png" id="4_dqkch"]
-[ext_resource type="Texture2D" uid="uid://iufkh74ls1uw" path="res://art/umbrella_icon.png" id="7_fjrip"]
+[ext_resource type="Texture2D" uid="uid://8qcybyw1it6u" path="res://art/shield-real.png" id="7_fjrip"]
 
 [sub_resource type="AtlasTexture" id="AtlasTexture_tuyoq"]
 atlas = ExtResource("2_qlg0r")

@@ -1,19 +1,23 @@
-[gd_scene load_steps=7 format=3 uid="uid://cmb1my775wjvl"]
+[gd_scene load_steps=9 format=3 uid="uid://cmb1my775wjvl"]
 
 [ext_resource type="Script" uid="uid://cp5lagfg5lpsc" path="res://scripts/enemy_manager.gd" id="1_sqyd6"]
 [ext_resource type="Texture2D" uid="uid://c4rt6pnaw3py" path="res://art/enemy_skeleton_right.png" id="2_i6mmg"]
 [ext_resource type="Texture2D" uid="uid://b0a7d75dhjl60" path="res://art/skeleton_2.png" id="3_cg41x"]
 [ext_resource type="PackedScene" uid="uid://dmprd5w076xb7" path="res://scenes/gem.tscn" id="3_m8so1"]
 [ext_resource type="Texture2D" uid="uid://bgkd5nbfjsu3p" path="res://art/tree_enemy.png" id="4_aojfi"]
+[ext_resource type="Texture2D" uid="uid://bytvs0vb5swuk" path="res://art/Soul_move.png" id="4_jie4v"]
 [ext_resource type="AudioStream" uid="uid://2unfnqmx7a46" path="res://audio/bone_step_hord.wav" id="5_a8nnw"]
+[ext_resource type="Texture2D" uid="uid://dqjawv82ljce" path="res://art/Sprout Sprite.png" id="6_m36cc"]
 
 [node name="EnemyManager" type="Node2D"]
 script = ExtResource("1_sqyd6")
 enemy_sprite = ExtResource("2_i6mmg")
 elite_sprite = ExtResource("3_cg41x")
+elite_mutated_sprite = ExtResource("4_jie4v")
 gem_scene = ExtResource("3_m8so1")
 enemy_size = Vector2(80, 90)
 tank_sprite = ExtResource("4_aojfi")
+sprout_sprite = ExtResource("6_m36cc")
 sound_step = ExtResource("5_a8nnw")
 
 [node name="EnemiesMesh" type="MultiMeshInstance2D" parent="."]

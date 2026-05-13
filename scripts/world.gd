@@ -33,6 +33,8 @@ var barrier_left_spawned = false
 var is_game_over = false
 var is_paused = false
 var pause_canvas: CanvasLayer = null
+var sprouts_spawned = false
+var elites_evolved = false
 
 
 func _ready():
@@ -48,6 +50,7 @@ func _ready():
 	boss_fire_spawned = false
 	barrier_right_spawned = false
 	barrier_left_spawned = false
+	sprouts_spawned = false
 	
 	# 4. Chama o Menu de Seleção de DDA
 	create_mode_selection_menu()
@@ -132,6 +135,14 @@ func _process(delta):
 		spawn_boss_fire()
 		boss_fire_spawned = true
 		print("EVENTO: Fire Boss entrou na Gaiola!")
+	
+	if game_time >= 180.0 and not sprouts_spawned:
+		EnemyManager.evolve_tanks()
+		sprouts_spawned = true
+	
+	if game_time >= 240.0 and not elites_evolved:
+		EnemyManager.evolve_elites()
+		elites_evolved = true
 	
 	if game_time >= 600.0:
 		check_time_limit_endgame()

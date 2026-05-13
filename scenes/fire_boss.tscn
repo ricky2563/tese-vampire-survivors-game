@@ -1,4 +1,4 @@
-[gd_scene load_steps=19 format=3 uid="uid://cgfy2a4d6eww1"]
+[gd_scene load_steps=20 format=3 uid="uid://cgfy2a4d6eww1"]
 
 [ext_resource type="Texture2D" uid="uid://pf43w664fc6p" path="res://art/boss_fogo.png" id="1_h8q6f"]
 [ext_resource type="Script" uid="uid://vftbrktvsytp" path="res://scripts/fire_boss.gd" id="1_nsgjb"]
@@ -12,6 +12,7 @@
 [ext_resource type="AudioStream" uid="uid://np34dr5ykkyc" path="res://audio/stop_snap.mp3" id="8_lo3o5"]
 [ext_resource type="Texture2D" uid="uid://bh6s7kal633ei" path="res://art/boss_fogo_attacks.png" id="9_wgrw4"]
 [ext_resource type="Texture2D" uid="uid://u3uq5lvigy74" path="res://art/boss_fogo_2_phase.png" id="10_lo3o5"]
+[ext_resource type="Texture2D" uid="uid://vc280bschq53" path="res://art/pointing_arrow.png" id="13_j4vko"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_nsgjb"]
 size = Vector2(122, 120)
@@ -105,5 +106,16 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_8yh2n")
 [node name="Label" type="Label" parent="SpeechBubble"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0, 0, 1)
+
+[node name="VisibleOnScreenNotifier2D" type="VisibleOnScreenNotifier2D" parent="."]
+rect = Rect2(-58, -61, 121, 120)
+
+[node name="IndicatorLayer" type="CanvasLayer" parent="."]
+
+[node name="Pointer" type="Sprite2D" parent="IndicatorLayer"]
+modulate = Color(0.84705883, 0.84705883, 0.84705883, 0.6666667)
+position = Vector2(0, -1)
+scale = Vector2(0.2340909, 0.26980874)
+texture = ExtResource("13_j4vko")
 
 [connection signal="timeout" from="AttackTimer" to="." method="_on_attack_timer_timeout"]

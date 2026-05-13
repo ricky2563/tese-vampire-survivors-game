@@ -19,6 +19,8 @@ extends CharacterBody2D
 @onready var stop_anim = $stop_attack
 @onready var speech_bubble = $SpeechBubble
 @onready var speech_label = $SpeechBubble/Label
+@onready var screen_notifier = $VisibleOnScreenNotifier2D
+@onready var pointer = $IndicatorLayer/Pointer
 
 var is_attacking = false
 var attack_deck = []
@@ -44,6 +46,8 @@ func _ready():
 	
 	if stop_anim:
 		stop_anim.visible = false
+	if pointer:
+		pointer.visible = false
 
 func _physics_process(delta):
 	if player:
@@ -59,6 +63,7 @@ func _physics_process(delta):
 			var direction = global_position.direction_to(target_pos)
 			velocity = direction * speed
 			move_and_slide()
+		update_offscreen_pointer()
 
 func _on_attack_timer_timeout():
 	if is_clone or (current_phase == 2 and is_invulnerable):
@@ -589,3 +594,30 @@ func die():
 		audio_player.stop()
 		
 	queue_free()
+	
+func update_offscreen_pointer():
+	if not pointer or not screen_notifier: return
+	
+	# Se o Boss está visível na câmara do jogador, esconde a seta
+	if screen_notifier.is_on_screen():
+		pointer.visible = false
+		return
+		
+	pointer.visible = true
+	
+	var viewport_rect = get_viewport_rect()
+	var screen_center = viewport_rect.size / 2.0
+	
+	var boss_screen_pos = get_global_transform_with_canvas().origin
+	
+	# Roda a seta para apontar para o Boss
+	var direction = (boss_screen_pos - screen_center).normalized()
+	pointer.rotation = direction.angle()
+	
+	# Prende a seta às bordas do ecrã (margin de 40 pixeis)
+	var padding = 40.0
+	var clamped_pos = boss_screen_pos
+	clamped_pos.x = clamp(clamped_pos.x, padding, viewport_rect.size.x - padding)
+	clamped_pos.y = clamp(clamped_pos.y, padding, viewport_rect.size.y - padding)
+	
+	pointer.position = clamped_pos

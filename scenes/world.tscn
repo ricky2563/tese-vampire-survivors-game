@@ -7,7 +7,7 @@
 [ext_resource type="PackedScene" uid="uid://cqwuf8x57w6a0" path="res://scenes/dda_panel.tscn" id="4_4mrxx"]
 [ext_resource type="PackedScene" uid="uid://cgfy2a4d6eww1" path="res://scenes/fire_boss.tscn" id="4_qfnet"]
 [ext_resource type="Texture2D" uid="uid://c6cetakt53yr3" path="res://art/bg_bg.png" id="7_4mrxx"]
-[ext_resource type="AudioStream" uid="uid://7efaxpifbhe0" path="res://audio/background.ogg" id="7_i7141"]
+[ext_resource type="AudioStream" uid="uid://bkleuuqgtonqt" path="res://audio/background-trimmed.ogg" id="8_4mrxx"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_qfnet"]
 font_size = 24
@@ -57,7 +57,7 @@ label_settings = SubResource("LabelSettings_qfnet")
 horizontal_alignment = 1
 
 [node name="BackgroundMusic" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("7_i7141")
+stream = ExtResource("8_4mrxx")
 volume_db = -15.0
 autoplay = true
 bus = &"Music"
