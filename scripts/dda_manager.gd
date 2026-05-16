@@ -3,7 +3,6 @@ extends Node
 var is_dda_active = true 
 
 enum TestMode { DYNAMIC, ALWAYS_EASY, ALWAYS_CHALLENGE }
-
 var current_test_mode: TestMode = TestMode.DYNAMIC
 
 var bus_music: int
@@ -27,10 +26,6 @@ const FILTER_HIGHSHELF = 1 # Ajuda (Realça)
 @export var duck_music_db: float = -1.0
 @export var challenge_horde_boost: float = 1.5
 
-# ==========================================
-# O DICIONÁRIO AGORA TEM AFINAÇÃO INDIVIDUAL ("challenge_volume")
-# E INCLUI A NOVA DE FOGO DA FASE 4
-# ==========================================
 var attack_history = {
 	"Boss: Meteor Attack": {"hits": 0, "dodges": 0, "bus_name": "Attack_Meteor", "challenge_volume": 2.0},
 	"Boss: Ring Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Ring",   "challenge_volume": -2.0},
@@ -39,9 +34,8 @@ var attack_history = {
 	"Boss: Nova Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Nova",   "challenge_volume": 2.0}
 }
 
-# Variáveis do DDA substituídas para aceitar múltiplos Bosses:
-var active_duckings = 0 # Conta quantos ataques precisam de silêncio (substitui o is_ducking)
-var attack_tweens = {} # Guarda os Tweens de cada ataque em separado
+var active_duckings = 0 
+var attack_tweens = {} 
 
 var time_since_last_damage = 0.0
 var horde_pressure_level = 0.0
@@ -64,23 +58,25 @@ func _ready():
 	bus_attack_nova = AudioServer.get_bus_index("Attack_Nova")
 
 func _process(delta):
-	if not is_dda_active: return
-	
+	# O RELÓGIO NUNCA PÁRA (Mesmo com DDA desligado para a tese ter dados!)
 	play_time += delta 
 	time_since_last_damage += delta
 	
-	if current_test_mode == TestMode.ALWAYS_CHALLENGE:
-		horde_pressure_level = 5.0
-		AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
-	elif current_test_mode == TestMode.ALWAYS_EASY:
-		horde_pressure_level = 0.0
-		AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
-	else:
-		if time_since_last_damage > 20.0 and active_duckings == 0:
-			horde_pressure_level = min(horde_pressure_level + (delta * 0.2), 5.0)
-			if not cluster_tween or not cluster_tween.is_running():
-				AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
+	# Só mexe na horda se o DDA estiver ativo
+	if is_dda_active:
+		if current_test_mode == TestMode.ALWAYS_CHALLENGE:
+			horde_pressure_level = 5.0
+			AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
+		elif current_test_mode == TestMode.ALWAYS_EASY:
+			horde_pressure_level = 0.0
+			AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
+		else:
+			if time_since_last_damage > 20.0 and active_duckings == 0:
+				horde_pressure_level = min(horde_pressure_level + (delta * 0.2), 5.0)
+				if not cluster_tween or not cluster_tween.is_running():
+					AudioServer.set_bus_volume_db(bus_horde, horde_pressure_level)
 		
+	# A GRAVAÇÃO NUNCA PÁRA
 	log_timer += delta
 	if log_timer >= 0.5:
 		dda_log.append({
@@ -102,9 +98,6 @@ func get_dda_state(bus_idx: int) -> int:
 	if AudioServer.is_bus_effect_enabled(bus_idx, FILTER_HIGHSHELF): return 1
 	return 0
 
-# ==========================================
-# FUNÇÕES DE TELEMETRIA
-# ==========================================
 func record_event(event_name: String, details: String = ""):
 	dda_log.append({
 		"time": play_time, 
@@ -121,30 +114,49 @@ func record_event(event_name: String, details: String = ""):
 
 func export_dda_telemetry():
 	if dda_log.is_empty(): return
-	var file = FileAccess.open("user://grafico_dda_audio.csv", FileAccess.WRITE)
+	var csv_string = "Tempo(s),Horda(dB),Musica(dB),Mao(Estado),Meteoro(Estado),Anel(Estado),Stop(Estado),Nova(Estado),Evento,Detalhes\n"
+	
+	for entry in dda_log:
+		var linha = str(snapped(entry.time, 0.1)) + "," + \
+					str(snapped(entry.horde_vol, 0.1)) + "," + \
+					str(snapped(entry.music_vol, 0.1)) + "," + \
+					str(entry.hand_state) + "," + \
+					str(entry.meteor_state) + "," + \
+					str(entry.ring_state) + "," + \
+					str(entry.stop_state) + "," + \
+					str(entry.nova_state) + "," + \
+					entry.event + "," + entry.details
+		csv_string += linha + "\n"
+		
+	var time_str = Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
+	var p_id = "Offline"
+	var versao = "X"
+	
+	if has_node("/root/ExperimentManager"):
+		p_id = ExperimentManager.participant_id
+		versao = ExperimentManager.current_version
+		
+	var filename = "user://DDA_Log_%s_Versao%s_%s.csv" % [p_id, versao, time_str]
+	var file = FileAccess.open(filename, FileAccess.WRITE)
 	if file:
-		file.store_line("Tempo(s),Horda(dB),Musica(dB),Mao(Estado),Meteoro(Estado),Anel(Estado),Stop(Estado),Nova(Estado),Evento,Detalhes")
-		for entry in dda_log:
-			var linha = str(snapped(entry.time, 0.1)) + "," + \
-						str(snapped(entry.horde_vol, 0.1)) + "," + \
-						str(snapped(entry.music_vol, 0.1)) + "," + \
-						str(entry.hand_state) + "," + \
-						str(entry.meteor_state) + "," + \
-						str(entry.ring_state) + "," + \
-						str(entry.stop_state) + "," + \
-						str(entry.nova_state) + "," + \
-						entry.event + "," + entry.details
-			file.store_line(linha)
+		file.store_string(csv_string)
 		file.close()
-		var folder_path = ProjectSettings.globalize_path("user://")
-		OS.shell_open(folder_path)
-		print("🎧 DADOS DO DDA (ÁUDIO) GRAVADOS COM SUCESSO EM: ", folder_path)
+		print("💾 Backup Local DDA guardado.")
+		
+	if has_node("/root/ExperimentManager") and ExperimentManager.has_method("receive_dda_csv"):
+		ExperimentManager.receive_dda_csv(csv_string)
+
 
 # ==========================================
 # GESTÃO LOCAL (O ATAQUE COMEÇOU/ACABOU)
 # ==========================================
 func start_attack(attack_name: String):
-	if not is_dda_active or not attack_history.has(attack_name): return
+	if not attack_history.has(attack_name): return
+	
+	# Se o DDA estiver desligado, regista apenas o ataque no Excel e não faz mais nada!
+	if not is_dda_active:
+		record_event("Ataque Base (Sem DDA)", attack_name)
+		return
 	
 	var my_bus = AudioServer.get_bus_index(attack_history[attack_name]["bus_name"])
 	
@@ -168,7 +180,6 @@ func start_attack(attack_name: String):
 		AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, true)
 		var volume_amount = attack_history[attack_name]["challenge_volume"]
 		
-		# Anima só a pista deste ataque
 		if attack_tweens.has(attack_name) and attack_tweens[attack_name]: 
 			attack_tweens[attack_name].kill()
 		attack_tweens[attack_name] = create_tween()
@@ -187,11 +198,13 @@ func start_attack(attack_name: String):
 	else:
 		record_event("Normal (Sem Filtros)", attack_name)
 
-# AGORA EXIGE O NOME PARA SABER QUE ATAQUE DEVE DESLIGAR
 func end_attack(attack_name: String):
 	if not attack_history.has(attack_name): return
 	
 	attack_history[attack_name]["dodges"] += 1
+	
+	# Se o DDA estiver desligado, não há filtros para desligar, apenas sai.
+	if not is_dda_active: return
 		
 	var my_bus = AudioServer.get_bus_index(attack_history[attack_name]["bus_name"])
 	AudioServer.set_bus_effect_enabled(my_bus, FILTER_LOWPASS, false)
@@ -208,27 +221,29 @@ func end_attack(attack_name: String):
 		cluster_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), AudioServer.get_bus_volume_db(bus_horde), horde_pressure_level, 1.5)
 
 func register_damage(source: String):
-	time_since_last_damage = 0.0 
-	horde_pressure_level = 0.0
-	if active_duckings == 0:
-		AudioServer.set_bus_volume_db(bus_horde, 0.0) 
-	
+	# Regista sempre a pancada no histórico para sabermos no Excel
 	if attack_history.has(source):
 		attack_history[source]["hits"] += 1
 		attack_history[source]["dodges"] = 0 
 		record_event("Dano Sofrido", source)
+		
+	# Só mexe no áudio se o DDA estiver ativo
+	if is_dda_active:
+		time_since_last_damage = 0.0 
+		horde_pressure_level = 0.0
+		if active_duckings == 0:
+			AudioServer.set_bus_volume_db(bus_horde, 0.0) 
 
-# ==========================================
-# FOCUS GERAL (Ducking para Ajuda - Agora independente)
-# ==========================================
 func trigger_threat_focus(attack_name: String, duration: float):
-	if not is_dda_active or not attack_history.has(attack_name): return 
+	if not attack_history.has(attack_name): return 
+	
+	# O Ducking (baixar música) só acontece se o DDA estiver ativado!
+	if not is_dda_active: return
 	if current_test_mode == TestMode.ALWAYS_CHALLENGE: return
 	
 	if current_test_mode == TestMode.DYNAMIC and attack_history[attack_name]["hits"] <= attack_history[attack_name]["dodges"]: 
 		return
 		
-	# Mete o pedido de silêncio na fila
 	active_duckings += 1
 	record_event("Ducking Ativado", "Micro-ajuste Horda/Musica") 
 	
@@ -238,11 +253,24 @@ func trigger_threat_focus(attack_name: String, duration: float):
 
 	await get_tree().create_timer(duration, false).timeout
 
-	# Tira o pedido da fila
 	active_duckings = max(0, active_duckings - 1)
 	
-	# Só repõe o volume no ecrã se mais nenhum ataque estiver a precisar de ajuda
 	if active_duckings == 0:
 		var restore_tween = create_tween().set_parallel(true)
 		restore_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), horde_pressure_level + duck_horde_db, horde_pressure_level, 0.8).set_ease(Tween.EASE_IN_OUT)
 		restore_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_music, v), duck_music_db, 0.0, 0.8).set_ease(Tween.EASE_IN_OUT)
+
+func reset_dda_telemetry():
+	dda_log.clear()
+	play_time = 0.0
+	log_timer = 0.0
+	active_duckings = 0
+	time_since_last_damage = 0.0
+	horde_pressure_level = 0.0
+	
+	# Limpa também a memória recente de hits/dodges para o algoritmo começar do zero
+	for attack in attack_history:
+		attack_history[attack]["hits"] = 0
+		attack_history[attack]["dodges"] = 0
+		
+	print("🔄 DDA: Telemetria e histórico limpos para o Restart.")

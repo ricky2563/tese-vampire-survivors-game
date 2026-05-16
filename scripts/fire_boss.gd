@@ -589,6 +589,15 @@ func enter_phase_4():
 	if not is_clone: attack_timer.start()
 
 func die():
+	# Impede que múltiplos tiros chamem a morte ao mesmo tempo (evita crash)
+	if is_invulnerable: return
+	is_invulnerable = true
+	speed = 0 # O boss congela
+	
+	# Desliga as colisões para não dar mais dano ao jogador enquanto morre
+	if has_node("CollisionShape2D"):
+		$CollisionShape2D.set_deferred("disabled", true)
+
 	if is_instance_valid(my_partner) and my_partner.current_health > 0 and my_partner.current_phase != 4:
 		my_partner.enter_phase_4()
 		if not is_clone:
@@ -603,16 +612,36 @@ func die():
 		if is_instance_valid(b) and b != self and b.current_health > 0:
 			remaining_bosses += 1
 			
-	if remaining_bosses == 0:
-		print("VITÓRIA TOTAL! A arena está limpa.")
-		if DDAManager.is_dda_active or DDAManager.is_dda_meteor_active:
-			if DDAManager.has_method("reset_mix"):
-				DDAManager.reset_mix()
-	
 	if audio_player.playing:
 		audio_player.stop()
+			
+	if remaining_bosses == 0:
+		print("VITÓRIA TOTAL! A iniciar cutscene...")
 		
-	queue_free()
+		if EnemyManager.has_method("clear_all_enemies"):
+			EnemyManager.clear_all_enemies()
+			
+		var orig_pos = global_position
+		var shake_tween = create_tween()
+		for i in range(25): # Treme 25 vezes durante 2.5 segundos
+			shake_tween.tween_property(self, "global_position", orig_pos + Vector2(randf_range(-15, 15), randf_range(-15, 15)), 0.1)
+			
+		var death_tween = create_tween().set_parallel(true)
+		death_tween.tween_property(self, "modulate", Color(10.0, 1.0, 1.0, 0.0), 2.5).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
+		death_tween.tween_property(self, "scale", Vector2(2.5, 2.5), 2.5).set_trans(Tween.TRANS_SINE)
+		
+		await get_tree().create_timer(2.5, false).timeout
+		
+		var main_scene = get_tree().current_scene
+		if main_scene and main_scene.has_method("trigger_game_over"):
+			main_scene.trigger_game_over(true, "VITÓRIA!\nO Fogo foi Extinto!")
+			
+		queue_free()
+	else:
+		var fade_tween = create_tween()
+		fade_tween.tween_property(self, "modulate:a", 0.0, 1.0)
+		await fade_tween.finished
+		queue_free()
 	
 func update_offscreen_pointer():
 	if not pointer or not screen_notifier: return

@@ -17,6 +17,7 @@ config/icon="res://icon.svg"
 
 [autoload]
 
+ExperimentManager="*res://scripts/ExperimentManager.gd"
 EnemyManager="*res://scenes/enemy_manager.tscn"
 DDAManager="*res://scripts/dda_manager.gd"
 

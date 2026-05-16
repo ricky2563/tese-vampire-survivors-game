@@ -36,7 +36,6 @@ var pause_canvas: CanvasLayer = null
 var sprouts_spawned = false
 var elites_evolved = false
 
-
 func _ready():
 	# 1. Congela o jogo logo ao abrir para esperar pela escolha do jogador
 	get_tree().paused = true
@@ -52,9 +51,8 @@ func _ready():
 	barrier_left_spawned = false
 	sprouts_spawned = false
 	
-	# 4. Chama o Menu de Seleção de DDA
+	# 4. Chama o Menu de Seleção de DDA para a Tese
 	create_mode_selection_menu()
-
 
 func create_mode_selection_menu():
 	var canvas = CanvasLayer.new()
@@ -72,22 +70,47 @@ func create_mode_selection_menu():
 	canvas.add_child(center)
 	
 	var vbox = VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 25)
+	vbox.add_theme_constant_override("separation", 20)
 	center.add_child(vbox)
 	
 	var title = Label.new()
-	title.text = "SELECT TEST MODE"
+	title.text = "BEM-VINDO AO TESTE"
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title.add_theme_font_size_override("font_size", 40)
 	vbox.add_child(title)
+	
+	var sub_title = Label.new()
+	sub_title.text = "Por favor, seleciona a versão que vais jogar."
+	sub_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	sub_title.add_theme_font_size_override("font_size", 16)
+	sub_title.modulate = Color(0.6, 0.6, 0.6)
+	vbox.add_child(sub_title)
 
-	# --- BOTÕES ---
-	create_mode_button(vbox, "DYNAMIC (Normal DDA)", Color(0.8, 0.8, 0.8), canvas, DDAManager.TestMode.DYNAMIC)
-	create_mode_button(vbox, "ALWAYS EASY (Min Limit)", Color(0.4, 1.0, 0.4), canvas, DDAManager.TestMode.ALWAYS_EASY)
-	create_mode_button(vbox, "ALWAYS CHALLENGE (Max Limit)", Color(1.0, 0.4, 0.4), canvas, DDAManager.TestMode.ALWAYS_CHALLENGE)
+	var spacer = Control.new()
+	spacer.custom_minimum_size = Vector2(0, 10)
+	vbox.add_child(spacer)
 
-# Função auxiliar para desenhar os botões
-func create_mode_button(container, text, color, canvas, mode_enum):
+	# --- BOTÕES PARA OS PARTICIPANTES ---
+	create_mode_button(vbox, "JOGAR VERSÃO A", Color(0.3, 0.8, 1.0), canvas, "A")
+	create_mode_button(vbox, "JOGAR VERSÃO B", Color(0.3, 0.8, 1.0), canvas, "B")
+	
+	var spacer2 = Control.new()
+	spacer2.custom_minimum_size = Vector2(0, 30)
+	vbox.add_child(spacer2)
+	
+	var debug_title = Label.new()
+	debug_title.text = "(Opções de Debug / Controlo)"
+	debug_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	debug_title.add_theme_font_size_override("font_size", 14)
+	debug_title.modulate = Color(0.4, 0.4, 0.4)
+	vbox.add_child(debug_title)
+
+	# --- BOTÕES DE DEBUG / CONTROLO ---
+	create_mode_button(vbox, "TESTE: MODO FÁCIL", Color(0.4, 1.0, 0.4, 0.6), canvas, "EASY")
+	create_mode_button(vbox, "TESTE: MODO DESAFIO", Color(1.0, 0.4, 0.4, 0.6), canvas, "CHALLENGE")
+
+# Função auxiliar para desenhar os botões que comunica com o ExperimentManager
+func create_mode_button(container, text, color, canvas, selection_string):
 	var btn = Button.new()
 	btn.text = text
 	btn.custom_minimum_size = Vector2(350, 60)
@@ -95,14 +118,20 @@ func create_mode_button(container, text, color, canvas, mode_enum):
 	container.add_child(btn)
 	
 	btn.pressed.connect(func():
-		DDAManager.current_test_mode = mode_enum
-		print("TEST MODE SELECTED: ", mode_enum)
-		canvas.queue_free() # Destrói o menu
-		start_the_game()    # Arranca o jogo
+		canvas.queue_free() # Destrói o menu no ecrã
+		
+		# O ExperimentManager trata de decidir o que fazer com a escolha (ligar/desligar DDA)
+		if has_node("/root/ExperimentManager"):
+			ExperimentManager.start_run(selection_string)
+			# Como a função start_run dá reload à cena, não precisamos de fazer muito mais, 
+			# a nova cena já arranca sem este menu e com as flags certas.
+		else:
+			print("❌ ERRO CRÍTICO: O ExperimentManager não está ativado no Autoload!")
+			start_the_game()
 	)
 
 func start_the_game():
-	get_tree().paused = false # Descongela o jogo
+	get_tree().paused = false # Descongela o jogo (caso o Autoload falhe por algum motivo)
 	print("Jogo Iniciado! O tempo começou a contar.")
 
 # ========================
@@ -206,8 +235,53 @@ func create_restart_menu(is_win: bool, message: String):
 	label.modulate = Color(0.2, 1.0, 0.2) if is_win else Color(1.0, 0.2, 0.2)
 	vbox.add_child(label)
 	
+	# ==========================================
+	# NOVO: MOSTRAR O CÓDIGO DO GOOGLE FORMS
+	# ==========================================
+	if has_node("/root/ExperimentManager"):
+		var codigo = ExperimentManager.get_form_code()
+		
+		var panel_codigo = PanelContainer.new()
+		vbox.add_child(panel_codigo)
+		
+		var margem = MarginContainer.new()
+		margem.add_theme_constant_override("margin_left", 20)
+		margem.add_theme_constant_override("margin_right", 20)
+		margem.add_theme_constant_override("margin_top", 20)
+		margem.add_theme_constant_override("margin_bottom", 20)
+		panel_codigo.add_child(margem)
+		
+		var vbox_codigo = VBoxContainer.new()
+		vbox_codigo.alignment = BoxContainer.ALIGNMENT_CENTER
+		vbox_codigo.add_theme_constant_override("separation", 10)
+		margem.add_child(vbox_codigo)
+		
+		var label_aviso = Label.new()
+		label_aviso.text = "Copia este código para o teu Questionário:"
+		label_aviso.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label_aviso.modulate = Color(0.7, 0.7, 0.7)
+		vbox_codigo.add_child(label_aviso)
+		
+		var label_id = Label.new()
+		label_id.text = codigo
+		label_id.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label_id.add_theme_font_size_override("font_size", 48)
+		label_id.modulate = Color(1.0, 0.8, 0.2) # Amarelo Dourado para destacar bem
+		vbox_codigo.add_child(label_id)
+		
+		var btn_copy = Button.new()
+		btn_copy.text = "COPIAR CÓDIGO"
+		btn_copy.custom_minimum_size = Vector2(250, 50)
+		btn_copy.pressed.connect(func():
+			DisplayServer.clipboard_set(codigo) # Copia automaticamente para a Área de Transferência!
+			btn_copy.text = "COPIADO COM SUCESSO!"
+			btn_copy.modulate = Color(0.2, 1.0, 0.2)
+		)
+		vbox_codigo.add_child(btn_copy)
+	# ==========================================
+	
 	var btn = Button.new()
-	btn.text = "RESTART GAME"
+	btn.text = "JOGAR NOVAMENTE"
 	btn.custom_minimum_size = Vector2(250, 60)
 	btn.pressed.connect(restart_game)
 	vbox.add_child(btn)
@@ -215,6 +289,13 @@ func create_restart_menu(is_win: bool, message: String):
 func restart_game():
 	get_tree().paused = false 
 	EnemyManager.clear_all_enemies()
+	
+	if DDAManager.has_method("reset_dda_telemetry"):
+		DDAManager.reset_dda_telemetry()
+	
+	if has_node("/root/ExperimentManager"):
+		ExperimentManager.dda_csv_cache = ""
+		ExperimentManager.player_csv_cache = ""
 
 	get_tree().reload_current_scene()
 

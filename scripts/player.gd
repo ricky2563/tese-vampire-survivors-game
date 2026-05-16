@@ -242,20 +242,53 @@ func die():
 		main_scene.trigger_game_over(false, "DERROTA...\nMorreste em combate!")
 	
 func export_telemetry_to_csv():
-	var file = FileAccess.open("user://grafico_vida_player.csv", FileAccess.WRITE)
+	if health_log.is_empty(): return
+	
+	var bosses = get_tree().get_nodes_in_group("boss")
+	if bosses.size() > 0:
+		for boss in bosses:
+			if "current_health" in boss and "max_health" in boss:
+				var hp = boss.current_health
+				var max_hp = boss.max_health
+				var percentagem = (float(hp) / float(max_hp)) * 100.0
+				
+				var tipo_boss = "Clone" if ("is_clone" in boss and boss.is_clone) else "Original"
+				
+				health_log.append({
+					"time": play_time,
+					"hp": health,
+					"event": "FIM: Boss HP (%s) -> %d/%d (%0.1f%%)" % [tipo_boss, hp, max_hp, percentagem]
+				})
+	else:
+		health_log.append({
+			"time": play_time,
+			"hp": health,
+			"event": "FIM: Boss Morto ou Não Spawnado"
+		})
+	
+	var csv_string = "Tempo(s),Vida,Evento\n"
+	
+	for entry in health_log:
+		var linha = str(snapped(entry.time, 0.1)) + "," + str(snapped(entry.hp, 0.1)) + "," + entry.event
+		csv_string += linha + "\n"
+		
+	var time_str = Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
+	var p_id = "Offline"
+	var versao = "X"
+	
+	if has_node("/root/ExperimentManager"):
+		p_id = ExperimentManager.participant_id
+		versao = ExperimentManager.current_version
+		
+	var filename = "user://Vida_Log_%s_Versao%s_%s.csv" % [p_id, versao, time_str]
+	var file = FileAccess.open(filename, FileAccess.WRITE)
 	if file:
-		file.store_line("Tempo(s),Vida,Evento")
-		
-		for entry in health_log:
-			var linha = str(snapped(entry.time, 0.1)) + "," + str(snapped(entry.hp, 0.1)) + "," + entry.event
-			file.store_line(linha)
-			
+		file.store_string(csv_string)
 		file.close()
+		print("💾 Backup Local Vida guardado com estado do Boss.")
 		
-		var caminho = ProjectSettings.globalize_path("user://grafico_vida_player.csv")
-		print("📊 DADOS DO GRÁFICO GRAVADOS COM SUCESSO EM:")
-		print(caminho)
-		print("======================================\n")
+	if has_node("/root/ExperimentManager") and ExperimentManager.has_method("receive_player_csv"):
+		ExperimentManager.receive_player_csv(csv_string)
 		
 func record_event(event_name):
 	health_log.append({
