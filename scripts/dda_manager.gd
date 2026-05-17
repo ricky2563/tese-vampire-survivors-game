@@ -1,5 +1,15 @@
 extends Node
 
+# ==========================================
+# SINAIS PARA O MUNDO (Eventos Ambientais)
+# ==========================================
+signal weather_event_started(event_type)
+signal weather_event_ended(event_type)
+
+var is_weather_active = false
+var base_weather_timer = 0.0
+var dda_weather_cooldown = 10.0
+
 var is_dda_active = true 
 
 enum TestMode { DYNAMIC, ALWAYS_EASY, ALWAYS_CHALLENGE }
@@ -61,6 +71,28 @@ func _process(delta):
 	# O RELÓGIO NUNCA PÁRA (Mesmo com DDA desligado para a tese ter dados!)
 	play_time += delta 
 	time_since_last_damage += delta
+	
+	# ==========================================
+	# LÓGICA DE EVENTOS AMBIENTAIS (CHUVA)
+	# ==========================================
+	if not is_weather_active:
+		if not is_dda_active:
+			# VERSÃO BASE: Conta 2 minutos e tenta rolar os 20%
+			base_weather_timer += delta
+			if base_weather_timer >= 120.0:
+				base_weather_timer = 0.0
+				if randf() <= 0.20:
+					start_weather_event("rain_storm")
+		else:
+			if are_all_attacks_challenge():
+				dda_weather_cooldown -= delta
+				if dda_weather_cooldown <= 0.0:
+					dda_weather_cooldown = 60.0 # Só volta a rolar dados daqui a 1 minuto
+					if randf() <= 0.8: # 30% de probabilidade
+						start_weather_event("rain_storm")
+			else:
+				dda_weather_cooldown = 10.0 # Se o player perder dodges, o cooldown faz reset rápido
+	# ==========================================
 	
 	# Só mexe na horda se o DDA estiver ativo
 	if is_dda_active:
@@ -146,14 +178,12 @@ func export_dda_telemetry():
 	if has_node("/root/ExperimentManager") and ExperimentManager.has_method("receive_dda_csv"):
 		ExperimentManager.receive_dda_csv(csv_string)
 
-
 # ==========================================
 # GESTÃO LOCAL (O ATAQUE COMEÇOU/ACABOU)
 # ==========================================
 func start_attack(attack_name: String):
 	if not attack_history.has(attack_name): return
 	
-	# Se o DDA estiver desligado, regista apenas o ataque no Excel e não faz mais nada!
 	if not is_dda_active:
 		record_event("Ataque Base (Sem DDA)", attack_name)
 		return
@@ -203,7 +233,6 @@ func end_attack(attack_name: String):
 	
 	attack_history[attack_name]["dodges"] += 1
 	
-	# Se o DDA estiver desligado, não há filtros para desligar, apenas sai.
 	if not is_dda_active: return
 		
 	var my_bus = AudioServer.get_bus_index(attack_history[attack_name]["bus_name"])
@@ -221,13 +250,11 @@ func end_attack(attack_name: String):
 		cluster_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), AudioServer.get_bus_volume_db(bus_horde), horde_pressure_level, 1.5)
 
 func register_damage(source: String):
-	# Regista sempre a pancada no histórico para sabermos no Excel
 	if attack_history.has(source):
 		attack_history[source]["hits"] += 1
 		attack_history[source]["dodges"] = 0 
 		record_event("Dano Sofrido", source)
 		
-	# Só mexe no áudio se o DDA estiver ativo
 	if is_dda_active:
 		time_since_last_damage = 0.0 
 		horde_pressure_level = 0.0
@@ -237,7 +264,6 @@ func register_damage(source: String):
 func trigger_threat_focus(attack_name: String, duration: float):
 	if not attack_history.has(attack_name): return 
 	
-	# O Ducking (baixar música) só acontece se o DDA estiver ativado!
 	if not is_dda_active: return
 	if current_test_mode == TestMode.ALWAYS_CHALLENGE: return
 	
@@ -260,6 +286,32 @@ func trigger_threat_focus(attack_name: String, duration: float):
 		restore_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_horde, v), horde_pressure_level + duck_horde_db, horde_pressure_level, 0.8).set_ease(Tween.EASE_IN_OUT)
 		restore_tween.tween_method(func(v): AudioServer.set_bus_volume_db(bus_music, v), duck_music_db, 0.0, 0.8).set_ease(Tween.EASE_IN_OUT)
 
+# ==========================================
+# SISTEMA AMBIENTAL (CHUVA / TROVOADA)
+# ==========================================
+func are_all_attacks_challenge() -> bool:
+	if current_test_mode == TestMode.ALWAYS_CHALLENGE:
+		return true
+		
+	for attack in attack_history:
+		if attack_history[attack]["dodges"] < 2:
+			return false
+	return true
+
+func start_weather_event(event_type: String):
+	is_weather_active = true
+	record_event("Evento Ambiental Início", event_type)
+	weather_event_started.emit(event_type)
+	print("⛈️ O EVENTO AMBIENTAL COMEÇOU: ", event_type)
+	
+	# O evento de tempestade dura 20 segundos
+	await get_tree().create_timer(20.0, false).timeout
+	
+	is_weather_active = false
+	record_event("Evento Ambiental Fim", event_type)
+	weather_event_ended.emit(event_type)
+	print("☀️ O EVENTO AMBIENTAL TERMINOU")
+
 func reset_dda_telemetry():
 	dda_log.clear()
 	play_time = 0.0
@@ -268,7 +320,10 @@ func reset_dda_telemetry():
 	time_since_last_damage = 0.0
 	horde_pressure_level = 0.0
 	
-	# Limpa também a memória recente de hits/dodges para o algoritmo começar do zero
+	is_weather_active = false
+	base_weather_timer = 0.0
+	dda_weather_cooldown = 10.0
+	
 	for attack in attack_history:
 		attack_history[attack]["hits"] = 0
 		attack_history[attack]["dodges"] = 0

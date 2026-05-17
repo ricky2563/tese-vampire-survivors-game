@@ -128,4 +128,4 @@ bus/8/send = &"Master"
 bus/8/effect/0/effect = SubResource("AudioEffectLowPassFilter_7kkex")
 bus/8/effect/0/enabled = false
 bus/8/effect/1/effect = SubResource("AudioEffectHighShelfFilter_cenje")
-bus/8/effect/1/enabled = true
+bus/8/effect/1/enabled = false

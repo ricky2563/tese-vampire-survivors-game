@@ -37,13 +37,16 @@ var sprouts_spawned = false
 var elites_evolved = false
 
 func _ready():
-	# 1. Congela o jogo logo ao abrir para esperar pela escolha do jogador
+	# ==========================================
+	# LIGAÇÃO DO CLIMA AO DDA
+	# ==========================================
+	DDAManager.weather_event_started.connect(_on_weather_started)
+	DDAManager.weather_event_ended.connect(_on_weather_ended)
+	
 	get_tree().paused = true
 	
-	# 2. Limpa os dados da partida anterior
 	EnemyManager.clear_all_enemies()
 	
-	# 3. Reset de variáveis de controlo do mundo
 	enemies_spawned = 0
 	game_time = 0.0
 	boss_fire_spawned = false
@@ -734,3 +737,36 @@ func create_pause_menu():
 	btn_reset.shortcut = r_shortcut
 	
 	vbox.add_child(btn_reset)
+
+# ==========================================
+# EVENTOS AMBIENTAIS (Recebidos do DDA)
+# ==========================================
+func _on_weather_started(event_type: String):
+	if event_type == "rain_storm":
+		print("O MUNDO REAGE: Começou a chover e a trovejar!")
+		
+		# 1. Liga o som e as partículas
+		if has_node("EfeitosClima/AudioChuvaForte"):
+			$EfeitosClima/AudioChuvaForte.play()
+		if has_node("EfeitosClima/ParticulasChuva"):
+			$EfeitosClima/ParticulasChuva.emitting = true
+		
+		# 2. Escurece o mundo suavemente (Faz um Tween na cor do CanvasModulate)
+		if has_node("EfeitosClima/Escuridao"):
+			var escurecer = create_tween()
+			escurecer.tween_property($EfeitosClima/Escuridao, "color", Color(0.6, 0.6, 0.7), 2.0)
+
+func _on_weather_ended(event_type: String):
+	if event_type == "rain_storm":
+		print("O MUNDO REAGE: A chuva parou!")
+		
+		# 1. Desliga o som e partículas
+		if has_node("EfeitosClima/AudioChuvaForte"):
+			$EfeitosClima/AudioChuvaForte.stop()
+		if has_node("EfeitosClima/ParticulasChuva"):
+			$EfeitosClima/ParticulasChuva.emitting = false
+			
+		# 2. Clareia o mundo de volta ao normal
+		if has_node("EfeitosClima/Escuridao"):
+			var clarear = create_tween()
+			clarear.tween_property($EfeitosClima/Escuridao, "color", Color(1.0, 1.0, 1.0), 2.0)
