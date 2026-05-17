@@ -1,0 +1,41 @@
+[gd_scene load_steps=8 format=3 uid="uid://b7lyt4x1yah3x"]
+
+[ext_resource type="Script" uid="uid://wxluftahx7ko" path="res://scripts/testbench_audio.gd" id="1_tacdy"]
+[ext_resource type="AudioStream" uid="uid://dnkis4g0jkalr" path="res://audio/meteor.wav" id="2_ixknj"]
+[ext_resource type="AudioStream" uid="uid://dshfyd182lnkb" path="res://audio/hand_pre_audio.wav" id="3_67gsh"]
+[ext_resource type="AudioStream" uid="uid://c7b1cy76vs7q1" path="res://audio/fire_ring_charge.wav" id="4_28oa4"]
+[ext_resource type="AudioStream" uid="uid://c8semhtskdwil" path="res://audio/stop_warning.wav" id="5_dykdl"]
+[ext_resource type="AudioStream" uid="uid://d1squhmpit6ln" path="res://audio/nova_stomps.mp3" id="6_exb5i"]
+[ext_resource type="AudioStream" uid="uid://dsliqnxcrrp1m" path="res://audio/thunderstorm.mp3" id="7_fn34e"]
+
+[node name="TestbenchAudio" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_tacdy")
+
+[node name="Attack_Meteor" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("2_ixknj")
+bus = &"Attack_Meteor"
+
+[node name="Attack_Hand" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("3_67gsh")
+bus = &"Attack_Hand"
+
+[node name="Attack_Ring" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("4_28oa4")
+bus = &"Attack_Ring"
+
+[node name="Attack_Stop" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("5_dykdl")
+bus = &"Attack_Stop"
+
+[node name="Attack_Nova" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("6_exb5i")
+bus = &"Attack_Nova"
+
+[node name="AudioChuvaForte" type="AudioStreamPlayer" parent="."]
+stream = ExtResource("7_fn34e")

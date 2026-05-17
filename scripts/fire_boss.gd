@@ -149,6 +149,7 @@ func fire_hand_attack():
 	get_tree().current_scene.add_child(attack)
 	
 	await get_tree().create_timer(2.5, false).timeout
+	if current_health <= 0: return
 	is_attacking = false
 	
 	if DDAManager.has_method("end_attack"):
@@ -167,12 +168,14 @@ func meteor_rain_attack():
 	audio_player.bus = "Attack_Meteor" 
 	audio_player.volume_db = 6.0
 	for i in range(3):
+		if current_health <= 0: return
 		if sound_fireball_cast:
 			audio_player.stream = sound_fireball_cast
 			audio_player.play(2.50)
 		await get_tree().create_timer(0.15, false).timeout
 
 	await get_tree().create_timer(1, false).timeout
+	if current_health <= 0: return
 
 	var positions = []
 	var player_pos = player.global_position
@@ -190,10 +193,12 @@ func meteor_rain_attack():
 		positions.append(pos)
 
 	for pos in positions:
+		if current_health <= 0: return
 		spawn_meteor(pos)
 		await get_tree().create_timer(0.05, false).timeout
 		
 	await get_tree().create_timer(1.2, false).timeout
+	if current_health <= 0: return
 	is_attacking = false
 	
 	if DDAManager.has_method("end_attack"):
@@ -228,7 +233,7 @@ func fire_ring_attack():
 	
 	var timer = 0.0
 	while timer < duration:
-		if not is_inside_tree():
+		if not is_inside_tree() or current_health <= 0:
 			return
 		
 		if get_tree().paused:
@@ -245,7 +250,7 @@ func fire_ring_attack():
 			audio_player.stop()
 			break
 
-	if not is_inside_tree(): return
+	if not is_inside_tree() or current_health <= 0: return
 
 	if fire_ring_scene:
 		var ring = fire_ring_scene.instantiate()
@@ -300,7 +305,7 @@ func stop_curse_attack():
 	
 	await get_tree().create_timer(telegraph_time, false).timeout
 	
-	if not is_inside_tree(): return
+	if not is_inside_tree() or current_health <= 0: return
 	if (current_phase == 2 or current_phase == 3) and not is_clone:
 		is_attacking = false
 		return
@@ -314,7 +319,7 @@ func stop_curse_attack():
 	var timer = 0.0
 	
 	while timer < check_time:
-		if not is_inside_tree(): return 
+		if not is_inside_tree() or current_health <= 0: return 
 		
 		if "velocity" in player and player.velocity.length() > 5.0:
 			player_moved = true
@@ -356,14 +361,14 @@ func fire_nova_attack():
 	speed = speed * 0.2 
 	
 	await get_tree().create_timer(1.0, false).timeout
-	if not is_inside_tree(): return
+	if not is_inside_tree() or current_health <= 0: return
 	
 	var num_hands = 24        
 	var radius_step = 25      
 	var angle_step = PI / 4.0 
 	
 	for i in range(num_hands):
-		if not is_inside_tree(): return
+		if not is_inside_tree() or current_health <= 0: return
 		if get_tree().paused:
 			await get_tree().process_frame
 			continue
@@ -589,12 +594,15 @@ func enter_phase_4():
 	if not is_clone: attack_timer.start()
 
 func die():
-	# Impede que múltiplos tiros chamem a morte ao mesmo tempo (evita crash)
+	# Impede que múltiplos tiros chamem a morte ao mesmo tempo
 	if is_invulnerable: return
 	is_invulnerable = true
-	speed = 0 # O boss congela
+	speed = 0 
 	
-	# Desliga as colisões para não dar mais dano ao jogador enquanto morre
+	if has_node("AttackTimer"):
+		$AttackTimer.stop() 
+	is_attacking = true 
+	
 	if has_node("CollisionShape2D"):
 		$CollisionShape2D.set_deferred("disabled", true)
 
@@ -604,8 +612,6 @@ func die():
 			my_partner.is_clone = false
 			my_partner.attack_timer.start()
 
-	print("Um Boss foi derrotado!")
-	
 	var remaining_bosses = 0
 	var bosses = get_tree().get_nodes_in_group("boss")
 	for b in bosses:
@@ -616,23 +622,119 @@ func die():
 		audio_player.stop()
 			
 	if remaining_bosses == 0:
-		print("VITÓRIA TOTAL! A iniciar cutscene...")
+		print("VITÓRIA TOTAL! A iniciar cutscene Cirúrgica (Jogador Livre!)...")
 		
+		# ==============================================================
+		# ATAQUE CIRÚRGICO: Congela só os relógios e inimigos!
+		# ==============================================================
+		var main_scene = get_tree().current_scene
+		if main_scene:
+			main_scene.set_process(false) # Pára o relógio no UI
+			var spawner = main_scene.get_node_or_null("EnemySpawner")
+			if spawner and spawner is Timer:
+				spawner.stop() # Pára de mandar hordas
+				
 		if EnemyManager.has_method("clear_all_enemies"):
-			EnemyManager.clear_all_enemies()
+			EnemyManager.clear_all_enemies() # Limpa os inimigos
+			
+		# Desliga APENAS a Telemetria do DDA (Congela o tempo no Excel)
+		if DDAManager:
+			DDAManager.process_mode = Node.PROCESS_MODE_DISABLED
 			
 		var orig_pos = global_position
-		var shake_tween = create_tween()
-		for i in range(25): # Treme 25 vezes durante 2.5 segundos
-			shake_tween.tween_property(self, "global_position", orig_pos + Vector2(randf_range(-15, 15), randf_range(-15, 15)), 0.1)
-			
+		
+		# ==============================================================
+		# 1. PARTÍCULAS DURANTE A ANIMAÇÃO
+		# ==============================================================
+		var leak_particles = CPUParticles2D.new()
+		leak_particles.emitting = true
+		leak_particles.amount = 200 
+		leak_particles.lifetime = 1.0
+		leak_particles.local_coords = false 
+		leak_particles.emission_shape = CPUParticles2D.EMISSION_SHAPE_SPHERE
+		leak_particles.emission_sphere_radius = 50.0 
+		leak_particles.direction = Vector2(0, -1) 
+		leak_particles.spread = 30.0 
+		leak_particles.gravity = Vector2(0, -100) 
+		leak_particles.initial_velocity_min = 150
+		leak_particles.initial_velocity_max = 300 
+		leak_particles.scale_amount_min = 4.0
+		leak_particles.scale_amount_max = 10.0
+		leak_particles.color = Color(2.0, 0.5, 2.5) 
+		leak_particles.z_index = 100 
+		add_child(leak_particles) 
+
+		# ==============================================================
+		# 2. ANIMAÇÃO DE SUBIDA E BRILHO
+		# ==============================================================
 		var death_tween = create_tween().set_parallel(true)
-		death_tween.tween_property(self, "modulate", Color(10.0, 1.0, 1.0, 0.0), 2.5).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
-		death_tween.tween_property(self, "scale", Vector2(2.5, 2.5), 2.5).set_trans(Tween.TRANS_SINE)
+		death_tween.tween_property(self, "global_position:y", orig_pos.y - 200, 3.5).set_trans(Tween.TRANS_SINE)
+		death_tween.tween_property(self, "modulate", Color(15.0, 15.0, 15.0, 1.0), 3.5).set_trans(Tween.TRANS_EXPO).set_ease(Tween.EASE_IN)
 		
-		await get_tree().create_timer(2.5, false).timeout
+		var shake_tween = create_tween()
+		for i in range(50): 
+			shake_tween.tween_property(self, "global_position:x", orig_pos.x + randf_range(-30, 30), 0.07)
+			
+		await get_tree().create_timer(3.5, false).timeout 
 		
-		var main_scene = get_tree().current_scene
+		if not is_inside_tree(): return 
+		leak_particles.emitting = false
+
+		# ==============================================================
+		# 4. EXPLOSÃO FINAL
+		# ==============================================================
+		var burst_particles = CPUParticles2D.new()
+		get_tree().current_scene.add_child(burst_particles) 
+		burst_particles.global_position = self.global_position
+		burst_particles.z_index = 200 
+		
+		burst_particles.emitting = false
+		burst_particles.amount = 500
+		burst_particles.lifetime = 2.0
+		burst_particles.one_shot = true
+		burst_particles.explosiveness = 1.0 
+		burst_particles.spread = 180.0 
+		burst_particles.local_coords = false
+		burst_particles.gravity = Vector2(0, 0) 
+		burst_particles.initial_velocity_min = 400
+		burst_particles.initial_velocity_max = 1200 
+		burst_particles.scale_amount_min = 6.0
+		burst_particles.scale_amount_max = 16.0
+		burst_particles.color = Color(2.0, 0.2, 2.5) 
+		
+		burst_particles.emitting = true 
+
+		# ==============================================================
+		# 5. CLARÃO BRANCO 
+		# ==============================================================
+		var canvas = CanvasLayer.new()
+		canvas.layer = 150
+		var flash = ColorRect.new()
+		flash.color = Color(1.0, 1.0, 1.0, 0.85) 
+		flash.set_anchors_preset(Control.PRESET_FULL_RECT)
+		canvas.add_child(flash)
+		get_tree().current_scene.add_child(canvas)
+		
+		var flash_tween = create_tween()
+		flash_tween.tween_property(flash, "color:a", 0.0, 2.0).set_trans(Tween.TRANS_SINE)
+		flash_tween.tween_callback(canvas.queue_free)
+
+		modulate.a = 0.0 
+		scale = Vector2(0.1, 0.1)
+
+		await get_tree().create_timer(2.5, false).timeout 
+		
+		if is_instance_valid(burst_particles):
+			burst_particles.queue_free()
+			
+		# ==============================================================
+		# RESTAURA OS SISTEMAS ANTES DE CHAMAR O GAME OVER
+		# ==============================================================
+		if DDAManager:
+			DDAManager.process_mode = Node.PROCESS_MODE_INHERIT
+		if main_scene:
+			main_scene.set_process(true)
+		
 		if main_scene and main_scene.has_method("trigger_game_over"):
 			main_scene.trigger_game_over(true, "VITÓRIA!\nO Fogo foi Extinto!")
 			
