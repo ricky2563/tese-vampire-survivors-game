@@ -163,44 +163,53 @@ func meteor_rain_attack():
 	if DDAManager.has_method("start_attack"):
 		DDAManager.start_attack("Boss: Meteor Attack")
 	
-	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Meteor Attack", 1.5)
+	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Meteor Attack", 2.0)
 	
 	audio_player.bus = "Attack_Meteor" 
 	audio_player.volume_db = 6.0
-	for i in range(3):
-		if current_health <= 0: return
-		if sound_fireball_cast:
-			audio_player.stream = sound_fireball_cast
-			audio_player.play(2.50)
-		await get_tree().create_timer(0.15, false).timeout
+	
+	# ==========================================
+	# 1. TOCA O SOM UMA VEZ E AVANÇA!
+	# ==========================================
+	if current_health > 0 and sound_fireball_cast:
+		audio_player.stream = sound_fireball_cast
+		audio_player.play()
 
-	await get_tree().create_timer(1, false).timeout
-	if current_health <= 0: return
-
+	# ==========================================
+	# 2. CRIA AS SOMBRAS IMEDIATAMENTE!
+	# ==========================================
 	var positions = []
 	var player_pos = player.global_position
 	var player_velocity = Vector2.ZERO
-	if "velocity" in player: player_velocity = player.velocity.normalized()
+	
+	# MUDANÇA: Retirado o .normalized() para ler a velocidade real (pixeis por segundo)
+	if "velocity" in player: player_velocity = player.velocity
 
-	positions.append(player_pos)
-	positions.append(player_pos + (player_velocity * 80))
-	positions.append(player_pos + (player_velocity * 160))
+	# MUDANÇA: Multiplicamos pelo tempo para prever a posição exata!
+	positions.append(player_pos) # Posição atual
+	positions.append(player_pos + (player_velocity * 0.75)) # Meio do caminho (0.75s)
+	positions.append(player_pos + (player_velocity * 1.5)) # Posição exata do impacto (1.5s)
 
 	for i in range(meteor_count - 3):
 		var angle = randf_range(0, TAU)
 		var distance = randf_range(50, 250) 
-		var pos = player_pos + Vector2.RIGHT.rotated(angle) * distance
+		
+		# MUDANÇA: O centro da chuva aleatória também acompanha a corrida do jogador
+		var future_center = player_pos + (player_velocity * randf_range(0.0, 1.5))
+		var pos = future_center + Vector2.RIGHT.rotated(angle) * distance
 		positions.append(pos)
 
 	for pos in positions:
 		if current_health <= 0: return
 		spawn_meteor(pos)
-		await get_tree().create_timer(0.05, false).timeout
+		# Só um intervalo de 0.05s para dar um efeito cascata às sombras
+		await get_tree().create_timer(0.05, false).timeout 
 		
-	await get_tree().create_timer(1.2, false).timeout
+	# Espera pelo Telegraph dos Meteoros (1.5s) + Queda (0.4s) para limpar o estado
+	await get_tree().create_timer(2.0, false).timeout
 	if current_health <= 0: return
-	is_attacking = false
 	
+	is_attacking = false
 	if DDAManager.has_method("end_attack"):
 		DDAManager.end_attack("Boss: Meteor Attack")
 
@@ -335,6 +344,29 @@ func stop_curse_attack():
 		
 	if player_moved:
 		if player.has_method("take_damage"): player.take_damage(30, "Boss: Stop Attack")
+		
+		# ==========================================
+		# FEEDBACK VISUAL NO JOGADOR (Ele tem de ler isto!)
+		# ==========================================
+		var penalty_label = Label.new()
+		penalty_label.text = "MOVEMENT PENALTY!"
+		penalty_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2)) # Vermelho Perigo
+		# Adiciona um outline (contorno) preto para se ler perfeitamente em cima da horda
+		penalty_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
+		penalty_label.add_theme_constant_override("outline_size", 4)
+		penalty_label.add_theme_font_size_override("font_size", 22)
+		
+		# Centra o texto em cima da cabeça do jogador
+		penalty_label.global_position = player.global_position + Vector2(-120, -40)
+		get_tree().current_scene.add_child(penalty_label)
+		
+		# Animação do texto a subir e a desaparecer
+		var float_tween = create_tween().set_parallel(true)
+		float_tween.tween_property(penalty_label, "global_position:y", penalty_label.global_position.y - 80, 2.0)
+		float_tween.tween_property(penalty_label, "modulate:a", 0.0, 2.0)
+		float_tween.chain().tween_callback(penalty_label.queue_free)
+		# ==========================================
+		
 		if speech_bubble and speech_label:
 			var taunts = ["I SAID STOP!", "BE STILL!", "MOVEMENT DETECTED!", "YOU DARE MOVE?", "RUNNING KILLS YOU FASTER!"]
 			speech_label.text = taunts.pick_random()

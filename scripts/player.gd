@@ -76,6 +76,7 @@ func deploy_umbrella():
 	
 	# Instancia e adiciona o escudo
 	var shield = umbrella_scene.instantiate()
+	shield.name = "UmbrellaShield" # <--- ESTA LINHA É NOVA E SUPER IMPORTANTE!
 	add_child(shield)
 	
 	print("Guarda-chuva ATIVADO!")
@@ -178,11 +179,31 @@ func take_damage(amount, source = "Desconhecido"):
 		return
 		
 	# ==========================================
-	# DDA: AVISAR O CÉREBRO QUE LEVÁMOS DANO
+	# ESCUDO: AGORA SÓ BLOQUEIA METEOROS!
 	# ==========================================
+	if is_shield_active and source == "Boss: Meteor Attack":
+		print("Escudo bloqueou com sucesso: ", source)
+		
+		# 1. Diz ao escudo para fazer o seu efeitinho
+		var shield_node = get_node_or_null("UmbrellaShield")
+		if shield_node and shield_node.has_method("block_attack"):
+			shield_node.block_attack()
+			
+		# 2. Faz a personagem piscar a branco
+		anim.modulate = Color(5.0, 5.0, 5.0, 1.0)
+		var flash_tween = create_tween()
+		flash_tween.tween_property(anim, "modulate", Color(1, 1, 1, 1), 0.2)
+		
+		# 3. Toca o som (se ele existir na cena)
+		if has_node("ShieldSound"):
+			$ShieldSound.play()
+			
+		return # <-- Cancela o resto da função! Bloqueaste o meteoro!
+	# ==========================================
+		
+	# DDA: AVISAR O CÉREBRO QUE LEVÁMOS DANO (Agora os inimigos normais passam pelo escudo!)
 	if DDAManager.has_method("register_damage"):
 		DDAManager.register_damage(source)
-	# ==========================================
 		
 	var damage_reduction = armor * 0.025 # Corta 10% por nível
 	var actual_damage = amount * (1.0 - damage_reduction)
@@ -191,10 +212,13 @@ func take_damage(amount, source = "Desconhecido"):
 	health -= actual_damage
 	health_bar.value = health 
 	
-	# ==========================================
+	# Feedback de Dor: Personagem pisca a vermelho!
+	anim.modulate = Color(1.0, 0.2, 0.2, 1.0) 
+	var dmg_tween = create_tween()
+	dmg_tween.tween_property(anim, "modulate", Color(1, 1, 1, 1), 0.3)
+	
 	# TELEMETRIA: Registar a pancada no Excel
-	# ==========================================
-	if actual_damage > 0.5: # Evita spam de micro-danos contínuos
+	if actual_damage > 0.5: 
 		health_log.append({
 			"time": play_time, 
 			"hp": health, 
@@ -308,14 +332,25 @@ func gain_experience(amount):
 func level_up():
 	level += 1
 	experience = 0 
-	experience_required += 15 
+	
+	# ==========================================
+	# CURVA DE XP HÍBRIDA
+	# ==========================================
+	if level <= 5:
+		# Até ao nível 5, mantém a tua fórmula original super rápida!
+		experience_required += 15 
+	else:
+		# A partir daqui, trava um bocado para não spamar o menu
+		experience_required += 40 
+	# ==========================================
 	
 	experience_bar.max_value = experience_required
 	experience_bar.value = experience
 	level_label.text = "Lvl. " + str(level)
 		
 	if auto_heal_enabled:
-		health += 5.0
+		# Cura massiva no late game (25 HP)
+		health += 25.0 
 		health = min(health, max_health)
 		if is_instance_valid(health_bar):
 			health_bar.value = health
@@ -332,14 +367,12 @@ func get_weapon_upgrade(weapon_name, level):
 	match weapon_name:
 		"bow":
 			match level:
-				0: return "bow_amount"
-				1: return "bow_piercing"
-				2: return "bow_multishot" 
-				3: return "bow_amount"
-				4: return "bow_triple"   
-				5: return "bow_piercing"
-				6: return "bow_amount"
-				7: return "bow_multishot" 
-				8: return "bow_piercing"
+				0: return "bow_amount"      # Nível 1 (+1 flecha)
+				1: return "bow_piercing"    # Nível 2 (+2 piercing de uma vez!)
+				2: return "bow_multishot"      # Nível 3 (Spread em cone)
+				3: return "bow_triple"   # Nível 4 (Dispara para Frente e Trás)
+				4: return "bow_amount"   
+				5: return "bow_piercing"    # Nível 5 (+2 piercing)
+				6: return "bow_multishot"   # Nível 6 (MAX: Dispara nas 4 Direções)
 								
 	return "none"

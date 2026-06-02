@@ -82,3 +82,4 @@ func spawn_bullet(angle):
 		if randf() < player.crit_chance:
 			bullet.damage *= 2 # Duplica o dano
 			bullet.modulate = Color(1.0, 0.8, 0.0) # Pinta a flecha de amarelo/dourado
+			bullet.is_crit = true

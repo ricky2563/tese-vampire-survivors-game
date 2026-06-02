@@ -346,29 +346,38 @@ func late_game():
 		spawn_horde()
 		
 func boss_chaos_phase():
-	# CAOS ABSOLUTO: O PC aguenta, vamos testar o limite visual!
+	# CAOS ABSOLUTO: O ecrã fica sempre cheio, mas nunca passa do limite de segurança!
 	
-	# 1. Reposição Extrema (Nasce lixo mais rápido do que o arco mata)
-	for i in range(45): # Subiu de 28 para 80 esqueletos por tick!
+	# Calcula quanto tempo já passou desde que a fase do caos começou (55s)
+	# A cada 20 segundos, o multiplicador de nascimento aumenta.
+	var tempo_no_caos = game_time - 55.0
+	var multiplicador = clamp(1.0 + (tempo_no_caos / 20.0), 1.0, 10.0) # Vai até 10x mais spawns!
+	
+	var total_normals = int(45 * multiplicador)
+	var total_tanks = int(6 * multiplicador)
+	
+	# 1. Reposição Extrema (Nasce lixo MUITO mais rápido do que o arco mata)
+	# Como tens o limite de segurança no EnemyManager, ele pára sozinho quando bater nos 350!
+	for i in range(total_normals): 
 		spawn_enemy_around_player(650, false)
 		
-	for i in range(6): # Subiu de 6 para 15 Tanks
+	for i in range(total_tanks): 
 		spawn_enemy_around_player(700, true) 
 		
-	# 2. Roleta Russa de Eventos (Eventos Múltiplos)
+	# 2. Roleta Russa de Eventos (Pressão máxima para tapar os buracos que o jogador cria)
 	var evento_chance = randi() % 100
 	
-	if evento_chance < 35:
-		# 35% chance: Horda Dupla (Enche o ecrã de forma circular)
+	if evento_chance < 40:
+		# 40% chance: Horda Dupla (Enche o ecrã de forma circular)
 		spawn_horde()
 		spawn_horde()
 		
-	elif evento_chance < 65:
+	elif evento_chance < 70:
 		# 30% chance: Duas Linhas (Cortam o mapa)
 		spawn_line_horde()
 		spawn_line_horde()
 		
-	elif evento_chance < 85:
+	elif evento_chance < 90:
 		# 20% chance: Parede Simples (Para obrigar o jogador a desviar-se)
 		var wall_dir = randi() % 4
 		if wall_dir == 0: spawn_barrier_right()

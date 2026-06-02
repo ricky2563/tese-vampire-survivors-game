@@ -33,9 +33,8 @@ var difficulty_multiplier = 1.0 # NOVO: Controla a dificuldade global
 # ========================
 # AUDIO DA HORDA
 # ========================
-@export var sound_step: AudioStream
+@export var sound_horde_ambience: AudioStream
 var horde_audio_player: AudioStreamPlayer
-var sound_timer = 0.0
 
 # ========================
 # VARIÁVEIS INTERNAS
@@ -54,6 +53,8 @@ var current_sprout_count = 0
 var tanks_mutated = false
 var elites_mutated = false
 var current_elite_mutated_count = 0
+var damage_numbers = []
+var default_font = ThemeDB.fallback_font
 
 var gem_container: Node2D
 
@@ -153,8 +154,12 @@ func _ready():
 
 	horde_audio_player = AudioStreamPlayer.new()
 	horde_audio_player.bus = "Horde"
-	horde_audio_player.max_polyphony = 16 
+	horde_audio_player.stream = sound_horde_ambience
 	add_child(horde_audio_player)
+	
+	# O áudio começa logo, mas perfeitamente silenciado!
+	horde_audio_player.volume_db = -80.0
+	horde_audio_player.play()
 
 # ========================
 # SPAWN DE INIMIGOS
@@ -163,13 +168,10 @@ func spawn_enemy(pos: Vector2, is_boss=false, is_tank=false):
 	if enemies.size() >= max_enemies:
 		return
 	
-	# Garante que o limite de pesados não é ultrapassado (soma tanks e sprouts)
 	if is_tank and (current_tank_count + current_sprout_count) >= max_tanks_allowed:
 		is_tank = false
 
 	var is_sprout = false
-	
-	# Se íamos fazer spawn de um Tank, mas já evoluímos, ele nasce como Sprout!
 	if is_tank and tanks_mutated:
 		is_tank = false
 		is_sprout = true
@@ -179,25 +181,35 @@ func spawn_enemy(pos: Vector2, is_boss=false, is_tank=false):
 	
 	if not is_tank and not is_sprout and not is_boss:
 		if difficulty_multiplier >= 1.45:
-			if elites_mutated:
-				is_elite_mutated = true
-			else:
-				is_elite = true
+			# ==========================================
+			# A GRANDE CORREÇÃO: Apenas 20% viram Elites!
+			# Os outros 80% continuam a ser inimigos base (fáceis de matar)
+			# ==========================================
+			if randf() < 0.20: 
+				if elites_mutated:
+					is_elite_mutated = true
+				else:
+					is_elite = true
 
-	# A velocidade e vida baseiam-se nas stats do Tank original
 	var base_spd = tank_speed if (is_tank or is_sprout) else enemy_speed
 	var actual_speed = base_spd * randf_range(0.85, 1.15)
 	
 	var final_health = 0.0
 	
 	if is_tank or is_sprout:
-		var tank_multiplier = lerp(1.0, difficulty_multiplier, 0.3) 
+		# PONTO E (Tanks): Cortámos o multiplicador para metade (0.15 em vez de 0.3)
+		# Eles vão ter mais vida, mas não vão ser esponjas ridículas!
+		var tank_multiplier = lerp(1.0, difficulty_multiplier, 0.15) 
 		final_health = tank_health * tank_multiplier
 	else:
-		var health_multiplier = min(difficulty_multiplier, 2.0)
-		final_health = enemy_health * health_multiplier
-		if is_elite: 
-			final_health *= 1.5 
+		if is_elite or is_elite_mutated: 
+			# Elites escalam (Até ao dobro)
+			var elite_multiplier = min(difficulty_multiplier, 2.0)
+			final_health = (enemy_health * elite_multiplier) * 1.5 
+		else:
+			# Inimigos BASE continuam fracos! (Máximo 1.2x)
+			var normal_multiplier = min(difficulty_multiplier, 1.2)
+			final_health = enemy_health * normal_multiplier
 		
 	var wobble_phase = randf_range(0.0, TAU)
 
@@ -352,19 +364,43 @@ func _process(delta):
 	
 	var total_enemies = enemies.size()
 	
-	if total_enemies > 0 and sound_step:
-		var chaos_factor = min(total_enemies / 150.0, 1.0)
-		var play_interval = lerp(0.6, 0.3, chaos_factor)
-		var volume_db = lerp(-25.0, -8.0, chaos_factor)
-		
-		horde_audio_player.volume_db = volume_db
-		
-		sound_timer += delta
-		if sound_timer >= play_interval:
-			horde_audio_player.stream = sound_step
-			horde_audio_player.pitch_scale = randf_range(0.7, 1.4) 
+	# ========================
+	# GESTÃO DINÂMICA DO AMBIENTE (DRONE)
+	# ========================
+	if total_enemies > 0 and sound_horde_ambience:
+		if not horde_audio_player.playing:
 			horde_audio_player.play()
-			sound_timer = randf_range(-0.05, 0.05)
+			
+		var chaos_factor = min(total_enemies / 150.0, 1.0)
+		
+		# Ajusta os decibéis dinamicamente (de murmúrio a volume alto)
+		var target_volume = lerp(-18.0, 0.0, chaos_factor)
+		var target_pitch = lerp(0.85, 1.15, chaos_factor)
+		
+		# Fade suave para evitar saltos
+		horde_audio_player.volume_db = lerp(horde_audio_player.volume_db, target_volume, delta * 3.0)
+		horde_audio_player.pitch_scale = lerp(horde_audio_player.pitch_scale, target_pitch, delta * 2.0)
+	else:
+		if horde_audio_player.playing:
+			# Fade out suave quando o mapa limpa
+			horde_audio_player.volume_db = lerp(horde_audio_player.volume_db, -80.0, delta * 5.0)
+			if horde_audio_player.volume_db <= -79.0:
+				horde_audio_player.stop()
+	
+	var numbers_active = false
+	for j in range(damage_numbers.size() - 1, -1, -1):
+		var num = damage_numbers[j]
+		num.life -= delta
+		num.pos.y -= 40 * delta # Faz o número flutuar para cima!
+		
+		if num.life <= 0:
+			damage_numbers.remove_at(j)
+		else:
+			numbers_active = true
+			
+	# Manda o Godot redesenhar os números se houver algum ativo
+	if numbers_active:
+		queue_redraw()
 
 	debug_print_timer += delta
 	if debug_print_timer >= 1.0:
@@ -381,7 +417,7 @@ func damage_enemy_at_position(pos: Vector2, damage: int):
 			e.health -= damage
 			break 
 
-func check_bullet_hit(bullet_pos: Vector2, hit_radius: float, damage: int) -> bool:
+func check_bullet_hit(bullet_pos: Vector2, hit_radius: float, damage: int, is_crit: bool = false) -> bool:
 	var hit_confirmed = false
 	var radius_squared = hit_radius * hit_radius
 	
@@ -390,6 +426,15 @@ func check_bullet_hit(bullet_pos: Vector2, hit_radius: float, damage: int) -> bo
 		if e.position.distance_squared_to(bullet_pos) < radius_squared:
 			e.health -= damage
 			hit_confirmed = true
+			
+			var random_offset = Vector2(randf_range(-10, 10), randf_range(-10, 10))
+			damage_numbers.append({
+				"pos": e.position + random_offset,
+				"amount": str(damage),
+				"life": 0.5,
+				"max_life": 0.5,
+				"is_crit": is_crit # Guardamos a informação se foi crítico ou não!
+			})
 			break 
 			
 	return hit_confirmed
@@ -416,7 +461,6 @@ func clear_all_enemies():
 		for gem in gem_container.get_children():
 			gem.queue_free()
 
-
 func evolve_tanks():
 	if not tanks_mutated:
 		tanks_mutated = true
@@ -424,3 +468,18 @@ func evolve_tanks():
 func evolve_elites():
 	if not elites_mutated:
 		elites_mutated = true
+		
+func _draw():
+	for num in damage_numbers:
+		var alpha = num.life / num.max_life
+		
+		# Cores e tamanhos por defeito (Ataque Normal)
+		var text_color = Color(1.0, 1.0, 1.0, alpha) # Branco
+		var font_size = 16
+		
+		# Se for crítico, muda para Amarelo e fica maior!
+		if num.get("is_crit", false) == true:
+			text_color = Color(1.0, 0.8, 0.0, alpha) # Amarelo Dourado
+			font_size = 22 # Maior para dar impacto
+		
+		draw_string(default_font, num.pos, num.amount, HORIZONTAL_ALIGNMENT_CENTER, -1, font_size, text_color)

@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://vftbrktvsytp" path="res://scripts/fire_boss.gd" id="1_nsgjb"]
 [ext_resource type="PackedScene" uid="uid://bwqc5ajvt008q" path="res://scenes/fire_hand_attack.tscn" id="2_smdvo"]
 [ext_resource type="PackedScene" uid="uid://bl6awex7t8b6q" path="res://scenes/Meteor.tscn" id="3_8gh2r"]
-[ext_resource type="AudioStream" uid="uid://dnkis4g0jkalr" path="res://audio/meteor.wav" id="4_ffb7q"]
+[ext_resource type="AudioStream" uid="uid://dbhn3nwxjjgw0" path="res://audio/boss_laught.mp3" id="4_n0vfx"]
 [ext_resource type="PackedScene" uid="uid://b40lxg72i0atw" path="res://scenes/fire_ring.tscn" id="5_bbvdf"]
 [ext_resource type="AudioStream" uid="uid://c7b1cy76vs7q1" path="res://audio/fire_ring_charge.wav" id="5_mw820"]
 [ext_resource type="AudioStream" uid="uid://dshfyd182lnkb" path="res://audio/hand_pre_audio.wav" id="6_dh0d8"]
@@ -64,7 +64,7 @@ collision_mask = 0
 script = ExtResource("1_nsgjb")
 fire_hand_scene = ExtResource("2_smdvo")
 meteor_scene = ExtResource("3_8gh2r")
-sound_fireball_cast = ExtResource("4_ffb7q")
+sound_fireball_cast = ExtResource("4_n0vfx")
 sound_ring_warning = ExtResource("5_mw820")
 sound_hand_cast = ExtResource("6_dh0d8")
 sound_stop_warning = ExtResource("7_8yh2n")

@@ -1,10 +1,13 @@
-[gd_scene load_steps=4 format=3 uid="uid://blp5sxg4yxans"]
+[gd_scene load_steps=5 format=3 uid="uid://blp5sxg4yxans"]
 
 [ext_resource type="Texture2D" uid="uid://ckeyo0merakif" path="res://art/meteor_shield.png" id="1_52hwc"]
 [ext_resource type="Script" uid="uid://mrut7pasampu" path="res://scripts/umbrella_shield.gd" id="1_j7gug"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_j7gug"]
 radius = 21.023796
+
+[sub_resource type="CanvasItemMaterial" id="CanvasItemMaterial_j7gug"]
+blend_mode = 1
 
 [node name="UmbrellaShield" type="Area2D" groups=["shield"]]
 collision_layer = 4
@@ -15,6 +18,7 @@ script = ExtResource("1_j7gug")
 shape = SubResource("CircleShape2D_j7gug")
 
 [node name="Sprite2D" type="Sprite2D" parent="."]
+material = SubResource("CanvasItemMaterial_j7gug")
 position = Vector2(3.3881318e-21, 1.1920929e-07)
 scale = Vector2(0.16094771, 0.18566176)
 texture = ExtResource("1_52hwc")

@@ -13,8 +13,10 @@ func create_shadow():
 		for y in range(64):
 			var dist = Vector2(x-32, y-32).length()
 			if dist < 30:
-				var alpha = 0.4 * (1.0 - dist/30.0)
-				img.set_pixel(x, y, Color(0,0,0,alpha))
+				# Aumentei a opacidade de 0.4 para 0.8
+				var alpha = 0.8 * (1.0 - dist/30.0) 
+				# Zona de Perigo em Vermelho Escuro!
+				img.set_pixel(x, y, Color(0.8, 0.0, 0.0, alpha)) 
 	
 	var tex = ImageTexture.create_from_image(img)
 	sprite.texture = tex

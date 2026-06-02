@@ -6,8 +6,8 @@
 [ext_resource type="PackedScene" uid="uid://dmprd5w076xb7" path="res://scenes/gem.tscn" id="3_m8so1"]
 [ext_resource type="Texture2D" uid="uid://bgkd5nbfjsu3p" path="res://art/tree_enemy.png" id="4_aojfi"]
 [ext_resource type="Texture2D" uid="uid://bytvs0vb5swuk" path="res://art/Soul_move.png" id="4_jie4v"]
-[ext_resource type="AudioStream" uid="uid://2unfnqmx7a46" path="res://audio/bone_step_hord.wav" id="5_a8nnw"]
 [ext_resource type="Texture2D" uid="uid://dqjawv82ljce" path="res://art/Sprout Sprite.png" id="6_m36cc"]
+[ext_resource type="AudioStream" uid="uid://bm6v7fabjbnhl" path="res://audio/skeleton_movement.mp3" id="8_jie4v"]
 
 [node name="EnemyManager" type="Node2D"]
 script = ExtResource("1_sqyd6")
@@ -18,6 +18,6 @@ gem_scene = ExtResource("3_m8so1")
 enemy_size = Vector2(80, 90)
 tank_sprite = ExtResource("4_aojfi")
 sprout_sprite = ExtResource("6_m36cc")
-sound_step = ExtResource("5_a8nnw")
+sound_horde_ambience = ExtResource("8_jie4v")
 
 [node name="EnemiesMesh" type="MultiMeshInstance2D" parent="."]
