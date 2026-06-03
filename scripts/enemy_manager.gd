@@ -229,6 +229,21 @@ func spawn_enemy(pos: Vector2, is_boss=false, is_tank=false):
 func spawn_gem(pos: Vector2, xp_value: int):
 	if gem_scene == null: return
 	
+	# ==========================================
+	# LIMITES DO MAPA (Com margem para o Magnet)
+	# ==========================================
+	var limite_esq = -1200
+	var limite_dir = 1350
+	var limite_cima = -600
+	var limite_baixo = 600
+	
+	# Permite que a gema fique, no máximo, 80 píxeis fora da zona jogável.
+	var margem = 50
+	
+	pos.x = clamp(pos.x, limite_esq - margem, limite_dir + margem)
+	pos.y = clamp(pos.y, limite_cima - margem, limite_baixo + margem)
+	# ==========================================
+	
 	pending_xp += xp_value
 	var current_gems = gem_container.get_child_count()
 		

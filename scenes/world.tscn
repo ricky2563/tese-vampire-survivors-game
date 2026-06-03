@@ -1,4 +1,4 @@
-[gd_scene load_steps=11 format=3 uid="uid://hnwm3t2ouuat"]
+[gd_scene load_steps=12 format=3 uid="uid://hnwm3t2ouuat"]
 
 [ext_resource type="Script" uid="uid://7tvcme4b771b" path="res://scripts/world.gd" id="1_k0juu"]
 [ext_resource type="PackedScene" uid="uid://pscvm7w81d4t" path="res://scenes/player.tscn" id="1_rwgxs"]
@@ -9,6 +9,7 @@
 [ext_resource type="Texture2D" uid="uid://c6cetakt53yr3" path="res://art/bg_bg.png" id="7_4mrxx"]
 [ext_resource type="AudioStream" uid="uid://bkleuuqgtonqt" path="res://audio/background-trimmed.ogg" id="8_4mrxx"]
 [ext_resource type="AudioStream" uid="uid://dsliqnxcrrp1m" path="res://audio/thunderstorm.mp3" id="9_7r4gi"]
+[ext_resource type="Texture2D" uid="uid://bxji26g8cy7dg" path="res://art/barrier_top_bottom.png" id="10_w7kh3"]
 
 [sub_resource type="LabelSettings" id="LabelSettings_qfnet"]
 font_size = 24
@@ -93,5 +94,39 @@ color = Color(0.74509805, 0.8235294, 1, 0.8)
 
 [node name="Escuridao" type="CanvasModulate" parent="EfeitosClima"]
 position = Vector2(-1, 0)
+
+[node name="BarrierTopBottom" type="Sprite2D" parent="."]
+z_index = -10
+position = Vector2(45.99997, -649)
+scale = Vector2(1.062271, 1)
+texture = ExtResource("10_w7kh3")
+
+[node name="BarrierTopBottom2" type="Sprite2D" parent="."]
+z_index = -10
+position = Vector2(-443.00003, 671)
+rotation = 3.1415927
+scale = Vector2(0.687605, 1)
+texture = ExtResource("10_w7kh3")
+
+[node name="BarrierTopBottom3" type="Sprite2D" parent="."]
+z_index = -10
+position = Vector2(572.06116, 672)
+rotation = 3.1415927
+scale = Vector2(0.67488074, 1)
+texture = ExtResource("10_w7kh3")
+
+[node name="BarrierTopBottom4" type="Sprite2D" parent="."]
+z_index = -10
+position = Vector2(1374, 97.08941)
+rotation = 1.5707964
+scale = Vector2(0.43433785, 1)
+texture = ExtResource("10_w7kh3")
+
+[node name="BarrierTopBottom5" type="Sprite2D" parent="."]
+z_index = -10
+position = Vector2(-1247, 100.99999)
+rotation = -1.5707964
+scale = Vector2(0.45585805, 1)
+texture = ExtResource("10_w7kh3")
 
 [connection signal="timeout" from="EnemySpawner" to="." method="_on_enemy_spawner_timeout"]
