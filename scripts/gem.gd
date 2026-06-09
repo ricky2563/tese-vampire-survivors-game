@@ -22,12 +22,19 @@ func update_pickup_range():
 	var shape = $CollisionShape2D.shape.duplicate()
 	$CollisionShape2D.shape = shape
 	
-	# Calcula o raio real que queremos que ela tenha
-	var bonus = player.pickup_range_level * 35 
-	var target_radius = base_pickup_radius + bonus
+	# ==========================================
+	# 1. CORREÇÃO: SINCRONIZAR COM A LINHA DO MENU
+	# ==========================================
+	var bonus = player.pickup_range_level * 55.0 # Mudar de 35 para 55!
 	
-	# O SEGREDO: Dividir pela escala da gema! 
-	# Se a escala for 2.0, o raio interno passa a metade, para que o raio global final fique exatamente o mesmo das outras gemas!
+	# ==========================================
+	# 2. COMPENSAÇÃO PARA GEMAS VIP
+	# ==========================================
+	var compensacao_borda = (scale.x - 1.0) * 15.0
+	
+	var target_radius = base_pickup_radius + bonus + compensacao_borda
+	
+	# O teu truque da escala mantém-se (é brilhante, não mexemos!)
 	shape.radius = target_radius / scale.x
 
 func _process(delta):

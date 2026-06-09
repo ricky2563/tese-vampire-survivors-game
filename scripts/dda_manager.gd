@@ -37,7 +37,7 @@ const FILTER_HIGHSHELF = 1 # Ajuda (Realça)
 @export var challenge_horde_boost: float = 1.5
 
 var attack_history = {
-	"Boss: Meteor Attack": {"hits": 0, "dodges": 0, "bus_name": "Attack_Meteor", "challenge_volume": 0.0},
+	"Boss: Meteor Attack": {"hits": 0, "dodges": 0, "bus_name": "Attack_Meteor", "challenge_volume": -10.0},
 	"Boss: Ring Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Ring",   "challenge_volume": -2.0},
 	"Boss: Stop Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Stop",   "challenge_volume": 0.0}, 
 	"Boss: Hand Attack":   {"hits": 0, "dodges": 0, "bus_name": "Attack_Hand",   "challenge_volume": 1.0},
@@ -77,17 +77,16 @@ func _process(delta):
 	# ==========================================
 	if not is_weather_active:
 		if not is_dda_active:
-			# VERSÃO BASE: Conta 2 minutos e tenta rolar os 20%
 			base_weather_timer += delta
-			if base_weather_timer >= 120.0:
+			if base_weather_timer >= 30.0:
 				base_weather_timer = 0.0
-				if randf() <= 0.20:
+				if randf() <= 0.25:
 					start_weather_event("rain_storm")
 		else:
 			if are_all_attacks_challenge():
 				dda_weather_cooldown -= delta
 				if dda_weather_cooldown <= 0.0:
-					dda_weather_cooldown = 60.0 # Só volta a rolar dados daqui a 1 minuto
+					dda_weather_cooldown = 60.0
 					if randf() <= 0.8: # 30% de probabilidade
 						start_weather_event("rain_storm")
 			else:
@@ -168,12 +167,26 @@ func export_dda_telemetry():
 		p_id = ExperimentManager.participant_id
 		versao = ExperimentManager.current_version
 		
-	var filename = "user://DDA_Log_%s_Versao%s_%s.csv" % [p_id, versao, time_str]
+	# ==========================================
+	# NOVO: DESCOBRIR A PASTA DO EXECUTÁVEL
+	# ==========================================
+	var base_dir = ""
+	if OS.has_feature("editor"):
+		# No editor, guarda na pasta de utilizador para não gerar ficheiros de tradução!
+		base_dir = ProjectSettings.globalize_path("user://")
+	else:
+		# No jogo exportado, guarda ao lado do .exe
+		base_dir = OS.get_executable_path().get_base_dir()
+		
+	var file_name = "DDA_Log_%s_Versao%s_%s.csv" % [p_id, versao, time_str]
+	var filename = base_dir.path_join(file_name)
+	# ==========================================
+	
 	var file = FileAccess.open(filename, FileAccess.WRITE)
 	if file:
 		file.store_string(csv_string)
 		file.close()
-		print("💾 Backup Local DDA guardado.")
+		print("💾 Backup Local DDA guardado em: ", filename)
 		
 	if has_node("/root/ExperimentManager") and ExperimentManager.has_method("receive_dda_csv"):
 		ExperimentManager.receive_dda_csv(csv_string)
@@ -293,10 +306,23 @@ func are_all_attacks_challenge() -> bool:
 	if current_test_mode == TestMode.ALWAYS_CHALLENGE:
 		return true
 		
+	var active_attacks_checked = 0
+	var challenged_attacks = 0
+
 	for attack in attack_history:
-		if attack_history[attack]["dodges"] < 2:
-			return false
-	return true
+		# Só verifica os ataques que o Boss já tentou usar (hits + dodges > 0)
+		var total_uses = attack_history[attack]["hits"] + attack_history[attack]["dodges"]
+		if total_uses > 0:
+			active_attacks_checked += 1
+			if attack_history[attack]["dodges"] >= 2:
+				challenged_attacks += 1
+
+	# Se ele ainda não atacou, não chove
+	if active_attacks_checked == 0:
+		return false
+
+	# Devolve true se TODOS os ataques que ele JÁ USOU estiverem em modo Challenge
+	return challenged_attacks == active_attacks_checked
 
 func start_weather_event(event_type: String):
 	is_weather_active = true

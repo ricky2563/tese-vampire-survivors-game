@@ -194,12 +194,11 @@ func setup_button(button, type):
 func draw_temporary_pickup_ring(player):
 	var ring = Line2D.new()
 	
-	# Mudei ligeiramente o multiplicador (de 35.0 para 55.0) para compensar o facto de agora só haver 3 níveis
-	var gem_radius = 40.0 + (player.pickup_range_level * 55.0)
-	
-	var player_body_offset = 15.0 
-	
-	var radius = gem_radius + player_body_offset
+	# ==========================================
+	# CORREÇÃO GEOMÉTRICA DO MAGNET
+	# ==========================================
+	# O Raio visual AGORA É EXATAMENTE o raio base (40) + o bónus do nível (55 por nível)
+	var radius = 40.0 + (player.pickup_range_level * 55.0)
 	
 	var circle_points = PackedVector2Array()
 	for i in range(65):

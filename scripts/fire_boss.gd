@@ -131,14 +131,15 @@ func fire_hand_attack():
 	if not player: return
 	if fire_hand_scene == null: return
 	is_attacking = true
+	var starting_phase = current_phase # <--- GUARDA A FASE
 	
 	if DDAManager.has_method("start_attack"):
 		DDAManager.start_attack("Boss: Hand Attack")
-	
 	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Hand Attack", 0.5)
 	
 	if sound_hand_cast:
 		audio_player.bus = "Attack_Hand"
+		audio_player.pitch_scale = 1.0
 		audio_player.volume_db = 0.0
 		audio_player.stream = sound_hand_cast
 		audio_player.play()
@@ -149,65 +150,53 @@ func fire_hand_attack():
 	get_tree().current_scene.add_child(attack)
 	
 	await get_tree().create_timer(2.5, false).timeout
-	if current_health <= 0: return
-	is_attacking = false
+	if current_health <= 0 or current_phase != starting_phase: return # <--- ABORTA SE MUDOU DE FASE
 	
+	is_attacking = false
 	if DDAManager.has_method("end_attack"):
 		DDAManager.end_attack("Boss: Hand Attack")
 
 func meteor_rain_attack():
 	if not player: return
 	is_attacking = true 
+	var starting_phase = current_phase # <--- GUARDA A FASE
 	var meteor_count = 12 
 	
 	if DDAManager.has_method("start_attack"):
 		DDAManager.start_attack("Boss: Meteor Attack")
-	
 	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Meteor Attack", 2.0)
 	
 	audio_player.bus = "Attack_Meteor" 
+	audio_player.pitch_scale = 1.0
 	audio_player.volume_db = 6.0
 	
-	# ==========================================
-	# 1. TOCA O SOM UMA VEZ E AVANÇA!
-	# ==========================================
 	if current_health > 0 and sound_fireball_cast:
 		audio_player.stream = sound_fireball_cast
 		audio_player.play()
 
-	# ==========================================
-	# 2. CRIA AS SOMBRAS IMEDIATAMENTE!
-	# ==========================================
 	var positions = []
 	var player_pos = player.global_position
 	var player_velocity = Vector2.ZERO
-	
-	# MUDANÇA: Retirado o .normalized() para ler a velocidade real (pixeis por segundo)
 	if "velocity" in player: player_velocity = player.velocity
 
-	# MUDANÇA: Multiplicamos pelo tempo para prever a posição exata!
-	positions.append(player_pos) # Posição atual
-	positions.append(player_pos + (player_velocity * 0.75)) # Meio do caminho (0.75s)
-	positions.append(player_pos + (player_velocity * 1.5)) # Posição exata do impacto (1.5s)
+	positions.append(player_pos)
+	positions.append(player_pos + (player_velocity * 0.75))
+	positions.append(player_pos + (player_velocity * 1.5))
 
 	for i in range(meteor_count - 3):
 		var angle = randf_range(0, TAU)
 		var distance = randf_range(50, 250) 
-		
-		# MUDANÇA: O centro da chuva aleatória também acompanha a corrida do jogador
 		var future_center = player_pos + (player_velocity * randf_range(0.0, 1.5))
 		var pos = future_center + Vector2.RIGHT.rotated(angle) * distance
 		positions.append(pos)
 
 	for pos in positions:
-		if current_health <= 0: return
+		if current_health <= 0 or current_phase != starting_phase: return # <--- ABORTA
 		spawn_meteor(pos)
-		# Só um intervalo de 0.05s para dar um efeito cascata às sombras
 		await get_tree().create_timer(0.05, false).timeout 
 		
-	# Espera pelo Telegraph dos Meteoros (1.5s) + Queda (0.4s) para limpar o estado
 	await get_tree().create_timer(2.0, false).timeout
-	if current_health <= 0: return
+	if current_health <= 0 or current_phase != starting_phase: return # <--- ABORTA
 	
 	is_attacking = false
 	if DDAManager.has_method("end_attack"):
@@ -223,27 +212,26 @@ func spawn_meteor(pos):
 func fire_ring_attack():
 	if not player: return
 	is_attacking = true
+	var starting_phase = current_phase # <--- GUARDA A FASE
 
 	if DDAManager.has_method("start_attack"):
 		DDAManager.start_attack("Boss: Ring Attack")
 
-	var temp_speed = speed # Evita conflitos com a speed original na Fase 4
+	var temp_speed = speed
 	speed = 0 
-	
 	var duration = 4.5 if current_phase >= 2 else 7.0
-	
 	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Ring Attack", duration)
 	
 	if sound_ring_warning:
 		audio_player.bus = "Attack_Ring"
+		audio_player.pitch_scale = 1.0
 		audio_player.volume_db = 0.0
 		audio_player.stream = sound_ring_warning
 		audio_player.play(0.0) 
 	
 	var timer = 0.0
 	while timer < duration:
-		if not is_inside_tree() or current_health <= 0:
-			return
+		if not is_inside_tree() or current_health <= 0 or current_phase != starting_phase: return # <--- ABORTA
 		
 		if get_tree().paused:
 			await get_tree().process_frame
@@ -259,22 +247,17 @@ func fire_ring_attack():
 			audio_player.stop()
 			break
 
-	if not is_inside_tree() or current_health <= 0: return
+	if not is_inside_tree() or current_health <= 0 or current_phase != starting_phase: return
 
 	if fire_ring_scene:
 		var ring = fire_ring_scene.instantiate()
 		ring.global_position = global_position
-		
-		if current_phase >= 2:
-			ring.scale = Vector2(0.5, 0.5)
-		elif current_phase == 4:
-			ring.scale = Vector2(1.0, 1.0)
+		if current_phase >= 2: ring.scale = Vector2(0.5, 0.5)
+		elif current_phase == 4: ring.scale = Vector2(1.0, 1.0)
 		get_tree().current_scene.add_child(ring)
 		
-	print("Anel de Fogo disparado após ", duration, "s de carga!")
-	
 	await get_tree().create_timer(1.0).timeout
-	if not is_inside_tree(): return
+	if not is_inside_tree() or current_phase != starting_phase: return # <--- ABORTA
 	
 	speed = temp_speed
 	is_attacking = false
@@ -289,11 +272,11 @@ func stop_curse_attack():
 
 	if not player: return
 	is_attacking = true
+	var starting_phase = current_phase # <--- GUARDA A FASE
 	var temp_speed = speed
 	speed = 0
 	
-	if DDAManager.has_method("start_attack"):
-		DDAManager.start_attack("Boss: Stop Attack")
+	if DDAManager.has_method("start_attack"): DDAManager.start_attack("Boss: Stop Attack")
 	
 	var telegraph_time = 1.2
 	var check_time = 0.3
@@ -302,6 +285,7 @@ func stop_curse_attack():
 		
 	if sound_stop_warning:
 		audio_player.bus = "Attack_Stop"
+		audio_player.pitch_scale = 1.0
 		audio_player.volume_db = 0.0
 		audio_player.stream = sound_stop_warning
 		audio_player.play()
@@ -313,11 +297,7 @@ func stop_curse_attack():
 		stop_anim.play("stop_attack")
 	
 	await get_tree().create_timer(telegraph_time, false).timeout
-	
-	if not is_inside_tree() or current_health <= 0: return
-	if (current_phase == 2 or current_phase == 3) and not is_clone:
-		is_attacking = false
-		return
+	if not is_inside_tree() or current_health <= 0 or current_phase != starting_phase: return # <--- ABORTA
 	
 	audio_player.stop() 
 	if sound_stop_snap:
@@ -328,14 +308,13 @@ func stop_curse_attack():
 	var timer = 0.0
 	
 	while timer < check_time:
-		if not is_inside_tree() or current_health <= 0: return 
-		
+		if not is_inside_tree() or current_health <= 0 or current_phase != starting_phase: return # <--- ABORTA
 		if "velocity" in player and player.velocity.length() > 5.0:
 			player_moved = true
 		timer += get_process_delta_time()
 		await get_tree().process_frame
 		
-	if not is_inside_tree(): return 
+	if not is_inside_tree() or current_phase != starting_phase: return 
 		
 	if stop_anim:
 		stop_anim.visible = false
@@ -344,28 +323,20 @@ func stop_curse_attack():
 		
 	if player_moved:
 		if player.has_method("take_damage"): player.take_damage(30, "Boss: Stop Attack")
+		var player_thought = Label.new()
+		player_thought.text = "I should stand still when he does that!"
+		player_thought.add_theme_color_override("font_color", Color(0.2, 1.0, 1.0))
+		player_thought.add_theme_color_override("font_outline_color", Color(0, 0, 0)) 
+		player_thought.add_theme_constant_override("outline_size", 8) 
+		player_thought.add_theme_font_size_override("font_size", 24) 
 		
-		# ==========================================
-		# FEEDBACK VISUAL NO JOGADOR (Ele tem de ler isto!)
-		# ==========================================
-		var penalty_label = Label.new()
-		penalty_label.text = "MOVEMENT PENALTY!"
-		penalty_label.add_theme_color_override("font_color", Color(1.0, 0.2, 0.2)) # Vermelho Perigo
-		# Adiciona um outline (contorno) preto para se ler perfeitamente em cima da horda
-		penalty_label.add_theme_color_override("font_outline_color", Color(0, 0, 0))
-		penalty_label.add_theme_constant_override("outline_size", 4)
-		penalty_label.add_theme_font_size_override("font_size", 22)
+		player_thought.global_position = player.global_position + Vector2(-190, -70)
+		get_tree().current_scene.add_child(player_thought)
 		
-		# Centra o texto em cima da cabeça do jogador
-		penalty_label.global_position = player.global_position + Vector2(-120, -40)
-		get_tree().current_scene.add_child(penalty_label)
-		
-		# Animação do texto a subir e a desaparecer
-		var float_tween = create_tween().set_parallel(true)
-		float_tween.tween_property(penalty_label, "global_position:y", penalty_label.global_position.y - 80, 2.0)
-		float_tween.tween_property(penalty_label, "modulate:a", 0.0, 2.0)
-		float_tween.chain().tween_callback(penalty_label.queue_free)
-		# ==========================================
+		var float_tween = create_tween()
+		float_tween.tween_property(player_thought, "global_position:y", player_thought.global_position.y - 40, 2.0) 
+		float_tween.tween_property(player_thought, "modulate:a", 0.0, 0.5) 
+		float_tween.tween_callback(player_thought.queue_free)
 		
 		if speech_bubble and speech_label:
 			var taunts = ["I SAID STOP!", "BE STILL!", "MOVEMENT DETECTED!", "YOU DARE MOVE?", "RUNNING KILLS YOU FASTER!"]
@@ -374,69 +345,84 @@ func stop_curse_attack():
 			get_tree().create_timer(2.0, false).timeout.connect(func(): speech_bubble.visible = false)
 		
 	await get_tree().create_timer(0.5, false).timeout
-	if not is_inside_tree(): return 
+	if not is_inside_tree() or current_phase != starting_phase: return # <--- ABORTA
 	
 	speed = temp_speed
 	is_attacking = false
-	
-	if DDAManager.has_method("end_attack"):
-		DDAManager.end_attack("Boss: Stop Attack")
+	if DDAManager.has_method("end_attack"): DDAManager.end_attack("Boss: Stop Attack")
 
 func fire_nova_attack():
 	if not player or fire_hand_scene == null: return
 	is_attacking = true
+	var starting_phase = current_phase # <--- GUARDA A FASE
 	
 	if DDAManager.has_method("start_attack"): DDAManager.start_attack("Boss: Nova Attack")
 	if DDAManager.is_dda_active: DDAManager.trigger_threat_focus("Boss: Nova Attack", 2.0)
 	
 	var temp_speed = speed
-	speed = speed * 0.2 
+	speed = 0 
 	
-	await get_tree().create_timer(1.0, false).timeout
-	if not is_inside_tree() or current_health <= 0: return
+	if sound_nova_warning:
+		audio_player.bus = "Attack_Nova"
+		audio_player.stream = sound_nova_warning
+		audio_player.pitch_scale = 0.8
+		audio_player.volume_db = 6.0
+		audio_player.play()
+		
+	var flash_tween = create_tween()
+	flash_tween.tween_property(self, "modulate", Color(2.5, 0.5, 3.0), 0.6)
 	
-	var num_hands = 24        
-	var radius_step = 25      
-	var angle_step = PI / 4.0 
+	await get_tree().create_timer(0.6, false).timeout
+	if not is_inside_tree() or current_health <= 0 or current_phase != starting_phase: return # <--- ABORTA
+	modulate = Color.WHITE
 	
-	for i in range(num_hands):
-		if not is_inside_tree() or current_health <= 0: return
-		if get_tree().paused:
-			await get_tree().process_frame
-			continue
+	var num_cones = 3 
+	
+	for i in range(num_cones):
+		if not is_inside_tree() or current_health <= 0 or current_phase != starting_phase: return # <--- ABORTA
+		
+		var player_pos = player.global_position
+		var player_vel = Vector2.ZERO
+		if "velocity" in player: player_vel = player.velocity
 			
-		var radius = 60 + (i * radius_step)
-		var angle = i * angle_step
-		var pos = global_position + Vector2(cos(angle), sin(angle)) * radius
+		var predicted_pos = player_pos + (player_vel * 0.8)
+		var target_angle = global_position.direction_to(predicted_pos).angle()
 		
-		var attack = fire_hand_scene.instantiate()
-		attack.global_position = pos
-		if "is_tracking" in attack:
-			attack.is_tracking = false
-		if "is_nova" in attack:
-			attack.is_nova = true
-
-		if i == 0 or i == 8 or i == 16:
-			var pitch = 0.85
-			if i == 8: pitch = 1.0
-			if i == 16: pitch = 1.15
+		modulate = Color(2.5, 0.5, 3.0)
+		await get_tree().create_timer(0.2, false).timeout
+		if not is_inside_tree() or current_health <= 0 or current_phase != starting_phase: return # <--- ABORTA
+		modulate = Color.WHITE
+		
+		if sound_nova_warning:
+			audio_player.bus = "Attack_Nova"
+			audio_player.stream = sound_nova_warning
+			audio_player.pitch_scale = 0.8
+			audio_player.volume_db = 6.0
+			audio_player.play()
 			
-			play_delayed_tum(pitch, attack.track_duration)
-		# ==========================================
-		
-		get_tree().current_scene.add_child(attack)
-		
-		await get_tree().create_timer(0.06, false).timeout
+		var angle_spreads = [-0.35, -0.17, 0.0, 0.17, 0.35] 
+		for offset in angle_spreads:
+			var final_angle = target_angle + offset
+			for dist in range(1, 8): 
+				var radius = 60 + (dist * 70) 
+				var pos = global_position + Vector2(cos(final_angle), sin(final_angle)) * radius
+				var attack = fire_hand_scene.instantiate()
+				attack.global_position = pos
+				if "is_tracking" in attack: attack.is_tracking = false
+				if "is_nova" in attack: attack.is_nova = true
+				get_tree().current_scene.add_child(attack)
+				
+		await get_tree().create_timer(1.2, false).timeout
+		if not is_inside_tree() or current_health <= 0 or current_phase != starting_phase: return # <--- ABORTA
 		
 	speed = temp_speed
 	is_attacking = false
 	
-	# Repõe o som normal para os próximos ataques
 	if sound_nova_warning:
 		audio_player.pitch_scale = 1.0 
+		audio_player.volume_db = 0.0
 		
 	if DDAManager.has_method("end_attack"): DDAManager.end_attack("Boss: Nova Attack")
-
 
 # ==========================================
 func play_delayed_tum(pitch_val: float, delay: float):
@@ -572,19 +558,120 @@ func enter_phase_2():
 
 func enter_phase_3():
 	current_phase = 3
+	is_invulnerable = true
+	speed = 0 # Paramos o Boss sem gravar a velocidade anterior!
+	
+	# ==========================================
+	# 1. CALA OS SONS E RESETA O PITCH
+	# ==========================================
+	if audio_player: 
+		audio_player.stop()
+		audio_player.pitch_scale = 1.0 # Reseta o distorcido
+	
+	if is_instance_valid(my_clone): 
+		my_clone.speed = 0
+		my_clone.current_phase = 3
+		if my_clone.audio_player: 
+			my_clone.audio_player.stop()
+			my_clone.audio_player.pitch_scale = 1.0
 	
 	if is_instance_valid(player) and player.has_method("record_event"):
 		player.record_event("BOSS: INÍCIO FASE 3")
+		
+	# --- INÍCIO DA CUTSCENE ÉPICA ---
+	self.process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().paused = true
+	
+	var original_z = z_index
+	var original_z_rel = z_as_relative
+	self.z_index = 100 
+	self.z_as_relative = false 
+	if is_instance_valid(my_clone):
+		my_clone.z_index = 100
+		my_clone.z_as_relative = false
+	
+	var cutscene_cam = Camera2D.new()
 	
 	if is_instance_valid(my_clone):
-		my_clone.current_phase = 3
+		cutscene_cam.global_position = global_position.lerp(my_clone.global_position, 0.5)
+	else:
+		cutscene_cam.global_position = global_position
 		
+	get_tree().current_scene.add_child(cutscene_cam)
+	cutscene_cam.make_current()
+	
+	var dark_bg = ColorRect.new()
+	dark_bg.color = Color(0, 0, 0, 0) 
+	dark_bg.size = Vector2(10000, 10000) 
+	dark_bg.position = -dark_bg.size / 2.0 
+	dark_bg.z_index = 90 
+	dark_bg.z_as_relative = false 
+	cutscene_cam.add_child(dark_bg)
+	
 	if speech_bubble and speech_label:
 		speech_label.text = "FLANK HIM!"
 		speech_bubble.visible = true
-		get_tree().create_timer(2.0, false).timeout.connect(func(): speech_bubble.visible = false)
+		speech_bubble.scale = Vector2(1.5, 1.5)
 		
-	print("BOSS FASE 3: Tática de Pinça Ativada!")
+	if sound_nova_warning:
+		audio_player.stream = sound_nova_warning
+		audio_player.pitch_scale = 0.5
+		audio_player.volume_db = 5.0
+		audio_player.play()
+
+	var cam_tween = create_tween().set_parallel(true)
+	cam_tween.tween_property(cutscene_cam, "zoom", Vector2(0.85, 0.85), 0.5).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	cam_tween.tween_property(dark_bg, "color:a", 0.85, 0.5) 
+	
+	modulate = Color(5.0, 0.2, 0.2) 
+	if is_instance_valid(my_clone): my_clone.modulate = Color(5.0, 0.2, 0.2)
+	
+	await cam_tween.finished
+	
+	var orig_cam_pos = cutscene_cam.global_position
+	var shake_tween = create_tween()
+	for i in range(15):
+		var offset = Vector2(randf_range(-25, 25), randf_range(-25, 25))
+		shake_tween.tween_property(cutscene_cam, "global_position", orig_cam_pos + offset, 0.04)
+	shake_tween.tween_property(cutscene_cam, "global_position", orig_cam_pos, 0.04)
+	
+	await shake_tween.finished
+	
+	await get_tree().create_timer(0.4, true).timeout
+	
+	speech_bubble.visible = false
+	speech_bubble.scale = Vector2(1.0, 1.0) 
+	
+	var cam_back = create_tween().set_parallel(true)
+	cam_back.tween_property(cutscene_cam, "zoom", Vector2(1.0, 1.0), 0.6).set_trans(Tween.TRANS_SINE)
+	cam_back.tween_property(dark_bg, "color:a", 0.0, 0.6)
+	cam_back.tween_property(self, "modulate", Color.WHITE, 0.6)
+	if is_instance_valid(my_clone): cam_back.tween_property(my_clone, "modulate", Color.WHITE, 0.6)
+	
+	await cam_back.finished
+	
+	cutscene_cam.queue_free()
+	z_index = original_z
+	z_as_relative = original_z_rel
+	if is_instance_valid(my_clone):
+		my_clone.z_index = original_z
+		my_clone.z_as_relative = original_z_rel
+	
+	# ==========================================
+	# 2. RESTAURA ESTADOS COM OS VALORES CORRETOS
+	# ==========================================
+	speed = original_speed + 15 # Devolvemos a velocidade exata! Sem erros.
+	is_attacking = false # Forçamos a máquina de estados a libertar o boss
+	
+	if is_instance_valid(my_clone): 
+		my_clone.speed = speed
+		my_clone.is_attacking = false
+	
+	is_invulnerable = false
+	self.process_mode = Node.PROCESS_MODE_INHERIT
+	get_tree().paused = false
+	
+	print("BOSS FASE 3: Tática de Pinça Ativada com Sucesso!")
 
 func enter_phase_4():
 	current_phase = 4
@@ -595,26 +682,67 @@ func enter_phase_4():
 	if is_instance_valid(player) and player.has_method("record_event"):
 		player.record_event("BOSS: INÍCIO FASE 4")
 	
-	print("BOSS FASE 4: MODO VINGANÇA!")
+	# --- INÍCIO DA CUTSCENE ---
+	self.process_mode = Node.PROCESS_MODE_ALWAYS
+	get_tree().paused = true
+	
+	var original_z = z_index
+	var original_z_rel = z_as_relative
+	self.z_index = 100 
+	self.z_as_relative = false 
+	
+	var cutscene_cam = Camera2D.new()
+	add_child(cutscene_cam)
+	cutscene_cam.make_current()
+	
+	var dark_bg = ColorRect.new()
+	dark_bg.color = Color(0, 0, 0, 0) 
+	dark_bg.size = Vector2(10000, 10000) 
+	dark_bg.position = -dark_bg.size / 2.0 
+	dark_bg.z_index = 90 
+	dark_bg.z_as_relative = false 
+	cutscene_cam.add_child(dark_bg)
 	
 	if speech_bubble and speech_label:
 		speech_label.text = "I WILL BURN YOU FOR THAT!"
 		speech_bubble.visible = true
-		get_tree().create_timer(3.0, false).timeout.connect(func(): speech_bubble.visible = false)
 
-	var flash_tween = create_tween()
-	flash_tween.tween_property(self, "modulate", Color(5.0, 5.0, 5.0), 0.5) 
+	# Câmara aproxima e escurece bastante o mapa (Vingança)
+	var cam_tween = create_tween().set_parallel(true)
+	cam_tween.tween_property(cutscene_cam, "zoom", Vector2(2.0, 2.0), 1.5).set_trans(Tween.TRANS_SINE)
+	cam_tween.tween_property(dark_bg, "color:a", 0.9, 1.5) 
+	cam_tween.tween_property(self, "modulate", Color(5.0, 5.0, 5.0), 1.5) # Brilha a branco/preto
 	
-	await flash_tween.finished
+	await cam_tween.finished
+	
+	# Troca a textura no pico da tensão!
 	if not is_inside_tree(): return
-	
 	if has_node("Sprite2D") and phase_4_texture != null:
 		$Sprite2D.texture = phase_4_texture
 		
-	var restore_tween = create_tween()
-	restore_tween.tween_property(self, "modulate", Color.WHITE, 0.5) 
+	# Agita violentamente
+	var original_pos = global_position
+	var shake_tween = create_tween()
+	for i in range(20):
+		var random_offset = Vector2(randf_range(-15, 15), randf_range(-15, 15))
+		shake_tween.tween_property(self, "global_position", original_pos + random_offset, 0.05)
+	shake_tween.tween_property(self, "global_position", original_pos, 0.05)
+	await shake_tween.finished
+
+	speech_bubble.visible = false
+		
+	var cam_back = create_tween().set_parallel(true)
+	cam_back.tween_property(cutscene_cam, "zoom", Vector2(1.0, 1.0), 1.0).set_trans(Tween.TRANS_SINE)
+	cam_back.tween_property(dark_bg, "color:a", 0.0, 1.0)
+	cam_back.tween_property(self, "modulate", Color.WHITE, 1.0)
 	
-	await restore_tween.finished
+	await cam_back.finished
+	
+	cutscene_cam.queue_free()
+	z_index = original_z
+	z_as_relative = original_z_rel
+	# --- FIM DA CUTSCENE ---
+	
 	if not is_inside_tree(): return
 	
 	current_health = max_health * 0.30
@@ -622,8 +750,13 @@ func enter_phase_4():
 	is_invulnerable = false
 	is_attacking = false
 	
+	self.process_mode = Node.PROCESS_MODE_INHERIT
+	get_tree().paused = false
+	
 	refill_deck_phase_4()
 	if not is_clone: attack_timer.start()
+	
+	print("BOSS FASE 4: MODO VINGANÇA!")
 
 func die():
 	# Impede que múltiplos tiros chamem a morte ao mesmo tempo

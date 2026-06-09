@@ -1,7 +1,7 @@
 [gd_scene load_steps=8 format=3 uid="uid://b7lyt4x1yah3x"]
 
 [ext_resource type="Script" uid="uid://wxluftahx7ko" path="res://scripts/testbench_audio.gd" id="1_tacdy"]
-[ext_resource type="AudioStream" uid="uid://dnkis4g0jkalr" path="res://audio/meteor.wav" id="2_ixknj"]
+[ext_resource type="AudioStream" uid="uid://dbhn3nwxjjgw0" path="res://audio/boss_laught.mp3" id="2_tacdy"]
 [ext_resource type="AudioStream" uid="uid://dshfyd182lnkb" path="res://audio/hand_pre_audio.wav" id="3_67gsh"]
 [ext_resource type="AudioStream" uid="uid://c7b1cy76vs7q1" path="res://audio/fire_ring_charge.wav" id="4_28oa4"]
 [ext_resource type="AudioStream" uid="uid://c8semhtskdwil" path="res://audio/stop_warning.wav" id="5_dykdl"]
@@ -18,7 +18,7 @@ grow_vertical = 2
 script = ExtResource("1_tacdy")
 
 [node name="Attack_Meteor" type="AudioStreamPlayer" parent="."]
-stream = ExtResource("2_ixknj")
+stream = ExtResource("2_tacdy")
 bus = &"Attack_Meteor"
 
 [node name="Attack_Hand" type="AudioStreamPlayer" parent="."]

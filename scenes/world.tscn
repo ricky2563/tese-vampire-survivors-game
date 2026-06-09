@@ -1,8 +1,7 @@
-[gd_scene load_steps=12 format=3 uid="uid://hnwm3t2ouuat"]
+[gd_scene load_steps=11 format=3 uid="uid://hnwm3t2ouuat"]
 
 [ext_resource type="Script" uid="uid://7tvcme4b771b" path="res://scripts/world.gd" id="1_k0juu"]
 [ext_resource type="PackedScene" uid="uid://pscvm7w81d4t" path="res://scenes/player.tscn" id="1_rwgxs"]
-[ext_resource type="PackedScene" uid="uid://c6yh1xmbwyw7w" path="res://scenes/enemy.tscn" id="3_4wyf3"]
 [ext_resource type="PackedScene" uid="uid://dktu8qfoyqyi" path="res://scenes/boss.tscn" id="3_71j4m"]
 [ext_resource type="PackedScene" uid="uid://cqwuf8x57w6a0" path="res://scenes/dda_panel.tscn" id="4_4mrxx"]
 [ext_resource type="PackedScene" uid="uid://cgfy2a4d6eww1" path="res://scenes/fire_boss.tscn" id="4_qfnet"]
@@ -21,9 +20,6 @@ boss_scene_fire = ExtResource("4_qfnet")
 dda_panel_scene = ExtResource("4_4mrxx")
 
 [node name="Player" parent="." instance=ExtResource("1_rwgxs")]
-
-[node name="Enemy" parent="." instance=ExtResource("3_4wyf3")]
-position = Vector2(-293, -154)
 
 [node name="EnemySpawner" type="Timer" parent="."]
 wait_time = 2.0

@@ -41,6 +41,7 @@ var is_shield_active = false
 var flicker_tween: Tween
 
 var auto_heal_enabled = false
+var last_damage_source = "Unknown"
 
 # --- TELEMETRIA ---
 var health_log = []
@@ -200,7 +201,7 @@ func take_damage(amount, source = "Desconhecido"):
 			
 		return # <-- Cancela o resto da função! Bloqueaste o meteoro!
 	# ==========================================
-		
+	last_damage_source = source
 	# DDA: AVISAR O CÉREBRO QUE LEVÁMOS DANO (Agora os inimigos normais passam pelo escudo!)
 	if DDAManager.has_method("register_damage"):
 		DDAManager.register_damage(source)
@@ -263,7 +264,8 @@ func die():
 	print("======================================\n")
 	
 	if main_scene and main_scene.has_method("trigger_game_over"):
-		main_scene.trigger_game_over(false, "DERROTA...\nMorreste em combate!")
+		var mensagem_morte = "DERROTA...\nMorreste em combate!\n\nCausa: " + last_damage_source
+		main_scene.trigger_game_over(false, mensagem_morte)
 	
 func export_telemetry_to_csv():
 	if health_log.is_empty(): return
@@ -304,12 +306,24 @@ func export_telemetry_to_csv():
 		p_id = ExperimentManager.participant_id
 		versao = ExperimentManager.current_version
 		
-	var filename = "user://Vida_Log_%s_Versao%s_%s.csv" % [p_id, versao, time_str]
+	# ==========================================
+	# NOVO: DESCOBRIR A PASTA DO EXECUTÁVEL
+	# ==========================================
+	var base_dir = ""
+	if OS.has_feature("editor"):
+		base_dir = ProjectSettings.globalize_path("user://")
+	else:
+		base_dir = OS.get_executable_path().get_base_dir()
+		
+	var file_name = "Vida_Log_%s_Versao%s_%s.csv" % [p_id, versao, time_str]
+	var filename = base_dir.path_join(file_name)
+	# ==========================================
+	
 	var file = FileAccess.open(filename, FileAccess.WRITE)
 	if file:
 		file.store_string(csv_string)
 		file.close()
-		print("💾 Backup Local Vida guardado com estado do Boss.")
+		print("💾 Backup Local Vida guardado em: ", filename)
 		
 	if has_node("/root/ExperimentManager") and ExperimentManager.has_method("receive_player_csv"):
 		ExperimentManager.receive_player_csv(csv_string)
