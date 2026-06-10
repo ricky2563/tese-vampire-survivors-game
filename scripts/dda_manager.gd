@@ -145,9 +145,27 @@ func record_event(event_name: String, details: String = ""):
 
 func export_dda_telemetry():
 	if dda_log.is_empty(): return
-	var csv_string = "Tempo(s),Horda(dB),Musica(dB),Mao(Estado),Meteoro(Estado),Anel(Estado),Stop(Estado),Nova(Estado),Evento,Detalhes\n"
+	
+	# 1. Puxamos a verificação para cima para sabermos o que escrever nas linhas
+	var p_id = "Offline"
+	var versao = "X"
+	var tipo_versao_csv = "BASE" # O que vai aparecer no SPSS
+	
+	if has_node("/root/ExperimentManager"):
+		p_id = ExperimentManager.participant_id
+		versao = ExperimentManager.current_version
+		
+	# 2. Descobre se a Run atual tem o DDA ligado ou não
+	if is_dda_active:
+		tipo_versao_csv = "DDA"
+	else:
+		tipo_versao_csv = "BASE"
+	
+	# 3. Adicionada a coluna 'Versao' aqui no fim do cabeçalho
+	var csv_string = "Tempo(s),Horda(dB),Musica(dB),Mao(Estado),Meteoro(Estado),Anel(Estado),Stop(Estado),Nova(Estado),Evento,Detalhes,Versao\n"
 	
 	for entry in dda_log:
+		# 4. Adicionada a variável `tipo_versao_csv` no fim de cada linha!
 		var linha = str(snapped(entry.time, 0.1)) + "," + \
 					str(snapped(entry.horde_vol, 0.1)) + "," + \
 					str(snapped(entry.music_vol, 0.1)) + "," + \
@@ -156,17 +174,11 @@ func export_dda_telemetry():
 					str(entry.ring_state) + "," + \
 					str(entry.stop_state) + "," + \
 					str(entry.nova_state) + "," + \
-					entry.event + "," + entry.details
+					entry.event + "," + entry.details + "," + tipo_versao_csv
 		csv_string += linha + "\n"
 		
 	var time_str = Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
-	var p_id = "Offline"
-	var versao = "X"
 	
-	if has_node("/root/ExperimentManager"):
-		p_id = ExperimentManager.participant_id
-		versao = ExperimentManager.current_version
-		
 	# ==========================================
 	# NOVO: DESCOBRIR A PASTA DO EXECUTÁVEL
 	# ==========================================

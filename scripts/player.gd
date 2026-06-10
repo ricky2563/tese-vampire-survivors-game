@@ -270,6 +270,21 @@ func die():
 func export_telemetry_to_csv():
 	if health_log.is_empty(): return
 	
+	# 1. Pede a Versão ao ExperimentManager
+	var versao = "X"
+	var p_id = "Offline"
+	var tipo_versao_csv = "BASE" # <--- VARIÁVEL PARA O EXCEL
+	
+	if has_node("/root/ExperimentManager"):
+		p_id = ExperimentManager.participant_id
+		versao = ExperimentManager.current_version
+		
+		# <--- DESCUBRE SE A RUN FOI DDA OU BASE
+		if DDAManager.is_dda_active:
+			tipo_versao_csv = "DDA"
+		else:
+			tipo_versao_csv = "BASE"
+	
 	var bosses = get_tree().get_nodes_in_group("boss")
 	if bosses.size() > 0:
 		for boss in bosses:
@@ -292,23 +307,15 @@ func export_telemetry_to_csv():
 			"event": "FIM: Boss Morto ou Não Spawnado"
 		})
 	
-	var csv_string = "Tempo(s),Vida,Evento\n"
+	var csv_string = "Tempo(s),Vida,Evento,Versao\n"
 	
 	for entry in health_log:
-		var linha = str(snapped(entry.time, 0.1)) + "," + str(snapped(entry.hp, 0.1)) + "," + entry.event
+		# MUDANÇA: Escreve "DDA" ou "BASE" na coluna!
+		var linha = str(snapped(entry.time, 0.1)) + "," + str(snapped(entry.hp, 0.1)) + "," + entry.event + "," + tipo_versao_csv
 		csv_string += linha + "\n"
 		
 	var time_str = Time.get_datetime_string_from_system().replace(":", "-").replace("T", "_")
-	var p_id = "Offline"
-	var versao = "X"
-	
-	if has_node("/root/ExperimentManager"):
-		p_id = ExperimentManager.participant_id
-		versao = ExperimentManager.current_version
-		
-	# ==========================================
-	# NOVO: DESCOBRIR A PASTA DO EXECUTÁVEL
-	# ==========================================
+
 	var base_dir = ""
 	if OS.has_feature("editor"):
 		base_dir = ProjectSettings.globalize_path("user://")
@@ -317,7 +324,6 @@ func export_telemetry_to_csv():
 		
 	var file_name = "Vida_Log_%s_Versao%s_%s.csv" % [p_id, versao, time_str]
 	var filename = base_dir.path_join(file_name)
-	# ==========================================
 	
 	var file = FileAccess.open(filename, FileAccess.WRITE)
 	if file:
